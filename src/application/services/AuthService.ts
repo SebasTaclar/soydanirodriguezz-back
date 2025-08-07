@@ -57,10 +57,6 @@ export class AuthService {
     // Validate password using centralized utility
     const isValidPassword = await PasswordUtils.comparePassword(password, user.password);
 
-    this.logger.logInfo(
-      `Password validation for user ${email}: ${isValidPassword ? 'successful' : 'failed'}`
-    );
-
     if (!isValidPassword) {
       this.logger.logWarning(`Login failed for user: ${email} - invalid password`);
       throw new AuthenticationError('Invalid credentials');
