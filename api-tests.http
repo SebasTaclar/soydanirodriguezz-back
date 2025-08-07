@@ -1,0 +1,69 @@
+# Test Azure Functions API Endpoints
+# All responses follow the standard format:
+# {
+#   "success": boolean,
+#   "message": string,
+#   "data": any,
+#   "errors": string[] (optional),
+#   "timestamp": string,
+#   "statusCode": number
+# }
+# 
+# ⚠️ IMPORTANTE: Los endpoints de USER CREATION requieren autenticación JWT
+# Para pruebas con autenticación, usar el archivo: api-tests-with-auth.http
+
+###
+# PUBLIC ENDPOINTS (No authentication required)
+###
+
+### Health Check - Database Connection Test
+GET http://localhost:7071/api/funcHealthDB
+
+### Login with Admin User - Success Response
+POST http://localhost:7071/api/funcLogin
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "admin123"
+}
+
+### Login with Regular User - Success Response
+POST http://localhost:7071/api/funcLogin
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "user123"
+}
+
+### Login with Invalid Credentials - Error Response
+POST http://localhost:7071/api/funcLogin
+Content-Type: application/json
+
+{
+  "email": "invalid@example.com",
+  "password": "invalid"
+}
+
+### Login with Missing Password - Validation Error Response
+POST http://localhost:7071/api/funcLogin
+Content-Type: application/json
+
+{
+  "email": "admin@example.com"
+}
+
+### Login with Empty Body - Validation Error Response
+POST http://localhost:7071/api/funcLogin
+Content-Type: application/json
+
+{}
+
+###
+# PROTECTED ENDPOINTS (Require JWT Authentication)
+# Use api-tests-with-auth.http for authenticated requests
+###
+
+# Note: funcCreateUser requires authentication
+# Please use api-tests-with-auth.http for user creation tests

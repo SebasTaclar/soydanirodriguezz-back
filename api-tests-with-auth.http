@@ -1,0 +1,123 @@
+# Test Azure Functions API Endpoints with Authentication
+# Variable para almacenar el token - actualizar después del login
+@token = 
+
+### Variables de entorno
+@baseUrl = http://localhost:7071
+
+###
+# ENDPOINTS PÚBLICOS (Sin autenticación requerida)
+###
+
+### 1. Health Check - No requiere autenticación
+GET {{baseUrl}}/api/funcHealthDB
+
+### 2. Login with Admin User - Obtener token
+# @name loginAdmin
+POST {{baseUrl}}/api/funcLogin
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "admin123"
+}
+
+### 3. Login with Regular User
+# @name loginUser
+POST {{baseUrl}}/api/funcLogin
+Content-Type: application/json
+
+{
+  "email": "user@example.com",
+  "password": "user123"
+}
+
+### 4. Login with Invalid Credentials - Error Response
+POST {{baseUrl}}/api/funcLogin
+Content-Type: application/json
+
+{
+  "email": "invalid@example.com",
+  "password": "invalid"
+}
+
+###
+# ENDPOINTS PROTEGIDOS (Requieren autenticación JWT)
+###
+
+### 5. Create User - CON token válido (actualizar @token con el valor del login)
+POST {{baseUrl}}/api/funcCreateUser
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "email": "newuser@example.com",
+  "password": "newuser123",
+  "name": "New User",
+  "role": "user",
+  "membershipPaid": false
+}
+
+### 6. Create User - SIN token (debe fallar con 401)
+POST {{baseUrl}}/api/funcCreateUser
+Content-Type: application/json
+
+{
+  "email": "unauthorized@example.com",
+  "password": "test123",
+  "name": "Unauthorized User",
+  "role": "user"
+}
+
+### 7. Create User - Con token inválido (debe fallar con 401)
+POST {{baseUrl}}/api/funcCreateUser
+Content-Type: application/json
+Authorization: Bearer invalid_token_here
+
+{
+  "email": "invalidtoken@example.com",
+  "password": "test123",
+  "name": "Invalid Token User",
+  "role": "user"
+}
+
+### 8. Create User - Con header Authorization mal formateado (debe fallar con 401)
+POST {{baseUrl}}/api/funcCreateUser
+Content-Type: application/json
+Authorization: {{token}}
+
+{
+  "email": "malformed@example.com",
+  "password": "test123",
+  "name": "Malformed Auth User",
+  "role": "user"
+}
+
+###
+# EJEMPLOS PARA COPIAR TOKEN MANUALMENTE
+###
+
+### Instrucciones:
+# 1. Ejecutar uno de los requests de login (2 o 3)
+# 2. Copiar el valor del token de la respuesta
+# 3. Actualizar la variable @token al inicio del archivo
+# 4. Ejecutar los endpoints protegidos
+
+### Ejemplo de respuesta exitosa de login:
+# {
+#   "success": true,
+#   "data": {
+#     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+#   },
+#   "message": "Login successful",
+#   "timestamp": "2025-08-03T10:30:00.000Z",
+#   "statusCode": 200
+# }
+
+### Ejemplo de respuesta de error de autenticación:
+# {
+#   "success": false,
+#   "message": "Unauthorized: Missing authorization header",
+#   "timestamp": "2025-08-03T10:30:00.000Z",
+#   "statusCode": 401
+# }

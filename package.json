@@ -1,0 +1,52 @@
+{
+  "name": "ed90mas1_back",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "clean": "rimraf dist",
+    "prestart": "npm run clean && npm run build",
+    "start": "func start",
+    "test": "echo \"No tests yet...\"",
+    "lint": "eslint . --ext .ts",
+    "lint:fix": "eslint . --ext .ts --fix",
+    "db:generate": "npx prisma generate",
+    "db:migrate": "npx prisma migrate dev",
+    "db:push": "npx prisma db push",
+    "db:studio": "npx prisma studio",
+    "postinstall": "prisma generate"
+  },
+  "dependencies": {
+    "@azure/communication-email": "^1.0.0",
+    "@azure/storage-blob": "^12.28.0",
+    "@prisma/client": "^5.20.0",
+    "@types/bcrypt": "^6.0.0",
+    "aws-sdk": "^2.1692.0",
+    "bcrypt": "^6.0.0",
+    "busboy": "^1.6.0",
+    "dotenv": "^16.4.7",
+    "jsonwebtoken": "^9.0.2",
+    "mongodb": "^6.15.0",
+    "prisma": "^5.20.0"
+  },
+  "devDependencies": {
+    "@azure/functions": "^3.0.0",
+    "@eslint/js": "^9.24.0",
+    "@types/busboy": "^1.5.4",
+    "@types/jsonwebtoken": "^9.0.9",
+    "@types/node": "^20.19.9",
+    "@typescript-eslint/eslint-plugin": "^8.29.0",
+    "@typescript-eslint/parser": "^8.29.0",
+    "eslint": "^9.24.0",
+    "eslint-config-prettier": "^10.1.1",
+    "eslint-plugin-import": "^2.31.0",
+    "eslint-plugin-node": "^11.1.0",
+    "eslint-plugin-prettier": "^5.2.6",
+    "globals": "^16.0.0",
+    "prettier": "^3.5.3",
+    "rimraf": "^5.0.0",
+    "typescript": "^4.0.0",
+    "typescript-eslint": "^8.29.0"
+  }
+}
