@@ -47,6 +47,8 @@ export class AuthService {
     // Get user by email from data source
     const user = await this.userDataSource.getByEmail(email);
 
+    this.logger.logInfo(`Fetched user for email ${email}: ${user ? 'found' : 'not found'}`);
+
     if (!user) {
       this.logger.logWarning(`Login failed for user: ${email} - user not found`);
       throw new AuthenticationError('Invalid credentials');
@@ -54,6 +56,10 @@ export class AuthService {
 
     // Validate password using centralized utility
     const isValidPassword = await PasswordUtils.comparePassword(password, user.password);
+
+    this.logger.logInfo(
+      `Password validation for user ${email}: ${isValidPassword ? 'successful' : 'failed'}`
+    );
 
     if (!isValidPassword) {
       this.logger.logWarning(`Login failed for user: ${email} - invalid password`);
