@@ -47,8 +47,6 @@ export class AuthService {
     // Get user by email from data source
     const user = await this.userDataSource.getByEmail(email);
 
-    this.logger.logInfo(`Fetched user for email ${email}: ${user ? 'found' : 'not found'}`);
-
     if (!user) {
       this.logger.logWarning(`Login failed for user: ${email} - user not found`);
       throw new AuthenticationError('Invalid credentials');
