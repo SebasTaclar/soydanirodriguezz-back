@@ -256,4 +256,54 @@ export class PurchaseService {
       throw error;
     }
   }
+
+  async getWallpaperStatus(): Promise<{ approved: number[]; pending: number[] }> {
+    try {
+      Logger.info('Getting wallpaper status');
+
+      // Obtener todas las compras con estado APPROVED o PENDING
+      const purchases = await this.prisma.purchase.findMany({
+        where: {
+          status: {
+            in: ['APPROVED', 'PENDING'],
+          },
+        },
+        select: {
+          wallpaperNumbers: true,
+          status: true,
+        },
+      });
+
+      const approvedWallpapers = new Set<number>();
+      const pendingWallpapers = new Set<number>();
+
+      // Procesar cada compra y extraer los números de wallpapers
+      for (const purchase of purchases) {
+        const wallpaperNumbers = JSON.parse(purchase.wallpaperNumbers) as number[];
+
+        if (purchase.status === 'APPROVED') {
+          wallpaperNumbers.forEach((num) => approvedWallpapers.add(num));
+        } else if (purchase.status === 'PENDING') {
+          wallpaperNumbers.forEach((num) => pendingWallpapers.add(num));
+        }
+      }
+
+      // Convertir Sets a arrays ordenados
+      const approvedArray = Array.from(approvedWallpapers).sort((a, b) => a - b);
+      const pendingArray = Array.from(pendingWallpapers).sort((a, b) => a - b);
+
+      Logger.info('Wallpaper status retrieved successfully', {
+        approvedCount: approvedArray.length,
+        pendingCount: pendingArray.length,
+      });
+
+      return {
+        approved: approvedArray,
+        pending: pendingArray,
+      };
+    } catch (error) {
+      Logger.error('Error getting wallpaper status', error);
+      throw error;
+    }
+  }
 }
