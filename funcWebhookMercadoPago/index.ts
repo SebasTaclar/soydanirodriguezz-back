@@ -2,7 +2,7 @@ import { Context, HttpRequest } from '@azure/functions';
 import { Logger } from '../src/shared/Logger';
 import { withApiHandler } from '../src/shared/apiHandler';
 import { ApiResponseBuilder } from '../src/shared/ApiResponse';
-import { getPurchaseService } from '../src/shared/serviceProvider';
+import { getPurchaseService, getMercadoPagoService } from '../src/shared/serviceProvider';
 
 const funcWebhookMercadoPago = async (
   _context: Context,
@@ -35,36 +35,48 @@ const funcWebhookMercadoPago = async (
 
     log.logInfo('Processing payment notification', { paymentId });
 
-    // Aquí normalmente consultarías la API de MP para obtener el estado actual del pago
-    // Por simplicidad, asumimos que el webhook trae el estado
-    // En producción deberías hacer una consulta a la API de MP para verificar el estado real
+    try {
+      // Consultar el estado real del pago en Mercado Pago
+      const mercadoPagoService = getMercadoPagoService();
+      const paymentDetails = await mercadoPagoService.getPaymentStatus(paymentId);
 
-    const purchaseService = getPurchaseService();
+      // Mapear estado de MP a nuestro sistema
+      const statusMapping = {
+        approved: 'APPROVED',
+        rejected: 'REJECTED',
+        pending: 'PENDING',
+        cancelled: 'CANCELLED',
+        refunded: 'REFUNDED',
+      };
 
-    // Por ahora, actualizamos el status basado en el tipo de notificación
-    // En una implementación real, consultarías el estado real del pago desde MP
-    let status = 'PENDING';
+      const mappedStatus = statusMapping[paymentDetails.status] || 'PENDING';
 
-    // Simulación del status - en producción esto vendría de la consulta a MP API
-    if (req.body.action === 'payment.created') {
-      status = 'PENDING';
-    } else if (req.body.action === 'payment.updated') {
-      // Aquí harías la consulta real al API de MP para verificar el estado
-      status = 'APPROVED'; // Esto es solo para testing
+      // Actualizar el estado de la compra usando el external reference
+      const purchaseService = getPurchaseService();
+      await purchaseService.updatePaymentStatus(paymentId, mappedStatus, paymentDetails);
+
+      log.logInfo('Payment status updated successfully', {
+        paymentId,
+        status: mappedStatus,
+        externalReference: paymentDetails.externalReference,
+      });
+
+      return ApiResponseBuilder.success({
+        message: 'Webhook processed successfully',
+        paymentId,
+        status: mappedStatus,
+        externalReference: paymentDetails.externalReference,
+      });
+    } catch (error) {
+      log.logError('Error processing payment webhook', error);
+
+      // Aún así devolver 200 para evitar que MP reintente infinitamente
+      return ApiResponseBuilder.success({
+        message: 'Webhook received but processing failed',
+        paymentId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
     }
-
-    await purchaseService.updatePaymentStatus(paymentId, status, req.body);
-
-    log.logInfo('Payment status updated successfully', {
-      paymentId,
-      status,
-    });
-
-    return ApiResponseBuilder.success({
-      message: 'Webhook processed successfully',
-      paymentId,
-      status,
-    });
   } else {
     log.logInfo('Webhook notification type not handled', { type });
     return ApiResponseBuilder.success({

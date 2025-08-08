@@ -2,6 +2,7 @@ import { Logger } from './Logger';
 import { AuthService } from '../application/services/AuthService';
 import { HealthService } from '../application/services/HealthService';
 import { PurchaseService } from '../application/services/PurchaseService';
+import { MercadoPagoService } from '../infrastructure/services/MercadoPagoService';
 import { UserPrismaAdapter } from '../infrastructure/DbAdapters/UserPrismaAdapter';
 import { IUserDataSource } from '../domain/interfaces/IUserDataSource';
 import { getPrismaClient } from '../config/PrismaClient';
@@ -41,6 +42,13 @@ export class ServiceProvider {
   static getPurchaseService(): PurchaseService {
     return new PurchaseService(this.prismaClient);
   }
+
+  /**
+   * Crea una instancia de MercadoPagoService
+   */
+  static getMercadoPagoService(): MercadoPagoService {
+    return new MercadoPagoService();
+  }
 }
 
 // Export directo de las funciones más usadas para mayor conveniencia
@@ -54,6 +62,10 @@ export const getHealthService = (logger: Logger): HealthService => {
 
 export const getPurchaseService = (): PurchaseService => {
   return ServiceProvider.getPurchaseService();
+};
+
+export const getMercadoPagoService = (): MercadoPagoService => {
+  return ServiceProvider.getMercadoPagoService();
 };
 
 export const getUserDataSource = (): IUserDataSource => {

@@ -128,6 +128,7 @@ export class MercadoPagoService {
         paymentId,
         status: response.status,
         statusDetail: response.status_detail,
+        externalReference: response.external_reference,
       });
 
       return {
@@ -138,6 +139,7 @@ export class MercadoPagoService {
         externalReference: response.external_reference,
         dateApproved: response.date_approved,
         dateCreated: response.date_created,
+        paymentMethodId: response.payment_method_id,
       };
     } catch (error) {
       Logger.error('Error getting payment status', error);

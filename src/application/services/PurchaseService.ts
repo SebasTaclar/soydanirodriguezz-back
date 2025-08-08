@@ -123,19 +123,38 @@ export class PurchaseService {
       Logger.info('Updating payment status', {
         mercadopagoPaymentId,
         status,
+        externalReference: paymentData?.externalReference,
       });
 
-      const purchase = await this.prisma.purchase.findFirst({
+      // Primero buscar por mercadopagoPaymentId si ya está guardado
+      let purchase = await this.prisma.purchase.findFirst({
         where: {
           mercadopagoPaymentId: mercadopagoPaymentId,
         },
       });
 
+      // Si no se encuentra por paymentId, buscar por externalReference
+      if (!purchase && paymentData?.externalReference) {
+        Logger.info('Purchase not found by paymentId, searching by externalReference', {
+          externalReference: paymentData.externalReference,
+        });
+
+        purchase = await this.prisma.purchase.findFirst({
+          where: {
+            externalReference: paymentData.externalReference,
+          },
+        });
+      }
+
       if (!purchase) {
-        Logger.warn('Purchase not found for payment ID', { mercadopagoPaymentId });
+        Logger.warn('Purchase not found for payment', {
+          mercadopagoPaymentId,
+          externalReference: paymentData?.externalReference,
+        });
         return;
       }
 
+      // Actualizar el purchase con toda la información del pago
       await this.prisma.purchase.update({
         where: {
           id: purchase.id,
@@ -149,7 +168,9 @@ export class PurchaseService {
 
       Logger.info('Payment status updated successfully', {
         purchaseId: purchase.id,
-        status,
+        oldStatus: purchase.status,
+        newStatus: status,
+        mercadopagoPaymentId,
       });
     } catch (error) {
       Logger.error('Error updating payment status', error);
