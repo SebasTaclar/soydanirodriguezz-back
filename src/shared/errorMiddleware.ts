@@ -17,7 +17,7 @@ export const withErrorHandler = <T extends unknown[]>(
     try {
       return await handler(context, req, ...args);
     } catch (error) {
-      const logger = new Logger(context.log);
+      const logger = new Logger(context);
       logger.logError('Unhandled error in function', error as Error);
       return handleError(error, context);
     }
@@ -25,7 +25,7 @@ export const withErrorHandler = <T extends unknown[]>(
 };
 
 const handleError = (error: unknown, context: Context) => {
-  const logger = new Logger(context.log);
+  const logger = new Logger(context);
 
   // Logging detallado para debugging
   logger.logError('Error details', {

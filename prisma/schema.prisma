@@ -20,3 +20,21 @@ model User {
 
   @@map("users")
 }
+
+model Purchase {
+  id                         Int      @id @default(autoincrement())
+  wallpaperNumber           Int      @map("wallpaper_number")
+  buyerEmail                String   @map("buyer_email")
+  buyerName                 String   @map("buyer_name")
+  buyerIdentificationNumber String   @map("buyer_identification_number")
+  mercadopagoPaymentId      String?  @map("mercadopago_payment_id")
+  preferenceId              String   @map("preference_id")
+  externalReference         String   @map("external_reference")
+  status                    String   @default("PENDING") // PENDING, APPROVED, CANCELLED, REJECTED
+  amount                    Int      @default(15000) // Amount in COP (Colombian Pesos)
+  currency                  String   @default("COP")
+  createdAt                 DateTime @default(now()) @map("created_at")
+  updatedAt                 DateTime @updatedAt @map("updated_at")
+
+  @@map("purchases")
+}

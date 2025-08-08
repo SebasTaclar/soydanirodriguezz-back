@@ -1,0 +1,108 @@
+### ==============================================
+### MERCADO PAGO - WALLPAPER SALES API TESTS
+### ==============================================
+
+### 1. Crear un nuevo pago para wallpaper
+POST http://localhost:7071/api/v1/payment/create
+Content-Type: application/json
+
+{
+  "wallpaperNumber": 42,
+  "buyerEmail": "cliente@ejemplo.com",
+  "buyerName": "Juan Pérez",
+  "buyerIdentificationNumber": "12345678"
+}
+
+### 2. Consultar compras por email
+GET http://localhost:7071/api/v1/purchases?email=cliente@ejemplo.com
+
+### 3. Webhook de Mercado Pago (simulación)
+POST http://localhost:7071/api/v1/webhook/mercadopago
+Content-Type: application/json
+
+{
+  "type": "payment",
+  "action": "payment.created",
+  "data": {
+    "id": "12345678901"
+  },
+  "live_mode": false,
+  "user_id": "123456789",
+  "api_version": "v1",
+  "date_created": "2024-01-15T10:30:00.000Z"
+}
+
+### 4. Webhook de actualización de pago (simulación)
+POST http://localhost:7071/api/v1/webhook/mercadopago
+Content-Type: application/json
+
+{
+  "type": "payment",
+  "action": "payment.updated",
+  "data": {
+    "id": "12345678901"
+  },
+  "live_mode": false,
+  "user_id": "123456789",
+  "api_version": "v1",
+  "date_created": "2024-01-15T10:35:00.000Z"
+}
+
+### ==============================================
+### PRUEBAS DE VALIDACIÓN
+### ==============================================
+
+### 5. Crear pago con datos inválidos (email malo)
+POST http://localhost:7071/api/v1/payment/create
+Content-Type: application/json
+
+{
+  "wallpaperNumber": 42,
+  "buyerEmail": "email-invalido",
+  "buyerName": "Juan Pérez",
+  "buyerIdentificationNumber": "12345678"
+}
+
+### 6. Crear pago con wallpaper number inválido
+POST http://localhost:7071/api/v1/payment/create
+Content-Type: application/json
+
+{
+  "wallpaperNumber": -5,
+  "buyerEmail": "cliente@ejemplo.com",
+  "buyerName": "Juan Pérez",
+  "buyerIdentificationNumber": "12345678"
+}
+
+### 7. Crear pago con campos faltantes
+POST http://localhost:7071/api/v1/payment/create
+Content-Type: application/json
+
+{
+  "wallpaperNumber": 42,
+  "buyerEmail": "cliente@ejemplo.com"
+}
+
+### 8. Consultar compras con email inválido
+GET http://localhost:7071/api/v1/purchases?email=email-malo
+
+### 9. Consultar compras sin email
+GET http://localhost:7071/api/v1/purchases
+
+### ==============================================
+### TESTS FOR PRODUCTION ENVIRONMENT
+### ==============================================
+
+### 10. Crear pago (PRODUCTION)
+# POST https://soydanirodriguezz-back-c3a4gvcqbrg8fcew.centralus-01.azurewebsites.net/api/v1/payment/create
+# Content-Type: application/json
+# 
+# {
+#   "wallpaperNumber": 42,
+#   "buyerEmail": "cliente@ejemplo.com",
+#   "buyerName": "Juan Pérez",
+#   "buyerIdentificationNumber": "12345678"
+# }
+
+### 11. Consultar compras (PRODUCTION)
+# GET https://soydanirodriguezz-back-c3a4gvcqbrg8fcew.centralus-01.azurewebsites.net/api/v1/purchases?email=cliente@ejemplo.com

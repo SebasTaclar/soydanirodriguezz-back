@@ -11,7 +11,7 @@ export interface HandlerWithLogger {
  */
 export const withLogger = (handler: HandlerWithLogger) => {
   return async (context: Context, req: HttpRequest): Promise<unknown> => {
-    const logger = new Logger(context.log);
+    const logger = new Logger(context);
 
     // Obtener el nombre de la función desde el context
     const functionName = context.invocationId

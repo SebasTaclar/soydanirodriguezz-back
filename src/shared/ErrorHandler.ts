@@ -53,7 +53,7 @@ export function ErrorHandlerMiddleware(
     } catch (error) {
       // Enhanced error logging with comprehensive information
       const enhancedError = error as EnhancedError;
-      const logger = log || new Logger(context.log);
+      const logger = log || new Logger(context);
 
       logger.logError(`💥 CRITICAL ERROR in ${context.executionContext.functionName}`);
       logger.logError(`🎯 Error occurred at step: ${errorContext.step || 'unknown'}`);
