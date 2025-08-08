@@ -81,7 +81,7 @@ export class PurchaseService {
           preferenceId: paymentResult.preferenceId,
           externalReference: paymentResult.externalReference,
           status: 'PENDING',
-          amount: 1000, // 15,000 COP
+          amount: 5000, // 15,000 COP
           currency: 'COP',
         },
       });
@@ -98,7 +98,7 @@ export class PurchaseService {
         preferenceId: paymentResult.preferenceId,
         externalReference: paymentResult.externalReference,
         wallpaperNumber: request.wallpaperNumber,
-        amount: 1000,
+        amount: 2000,
         currency: 'COP',
       };
     } catch (error) {

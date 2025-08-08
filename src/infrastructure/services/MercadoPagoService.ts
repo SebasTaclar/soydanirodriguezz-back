@@ -28,7 +28,7 @@ export class MercadoPagoService {
     this.client = new MercadoPagoConfig({
       accessToken: accessToken,
       options: {
-        timeout: 5000,
+        timeout: 16000, // 16 segundos - Ajustar según necesidades
         idempotencyKey: 'dev',
       },
     });
@@ -48,7 +48,7 @@ export class MercadoPagoService {
             title: `Wallpaper Digital #${data.wallpaperNumber}`,
             description: `Compra de wallpaper digital número ${data.wallpaperNumber}`,
             quantity: 1,
-            unit_price: 1000, // 15,000 COP
+            unit_price: 5000, // 15,000 COP
             currency_id: 'COP',
           },
         ],
