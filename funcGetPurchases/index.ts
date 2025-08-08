@@ -9,34 +9,40 @@ const funcGetPurchases = async (
   req: HttpRequest,
   log: Logger
 ): Promise<unknown> => {
-  // Obtener email desde query parameters
+  // Obtener email desde query parameters (opcional)
   const email = req.query.email;
 
-  if (!email) {
-    return ApiResponseBuilder.validationError(['Email query parameter is required']);
+  // Si hay email, validar formato
+  if (email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return ApiResponseBuilder.validationError(['Invalid email format']);
+    }
   }
-
-  // Validar formato de email
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return ApiResponseBuilder.validationError(['Invalid email format']);
-  }
-
-  log.logInfo('Getting purchases for email', { email });
 
   // Obtener las compras usando el servicio
   const purchaseService = getPurchaseService();
-  const purchases = await purchaseService.getPurchasesByEmail(email);
+  let purchases;
+
+  if (email) {
+    log.logInfo('Getting purchases for specific email', { email });
+    purchases = await purchaseService.getPurchasesByEmail(email);
+  } else {
+    log.logInfo('Getting all purchases');
+    purchases = await purchaseService.getAllPurchases();
+  }
 
   log.logInfo('Purchases retrieved successfully', {
-    email,
+    email: email || 'all',
     count: purchases.length,
   });
 
-  // Formatear la respuesta para no exponer datos internos
+  // Formatear la respuesta
   const formattedPurchases = purchases.map((purchase) => ({
     id: purchase.id,
-    wallpaperNumber: purchase.wallpaperNumber,
+    wallpaperNumbers: purchase.wallpaperNumbers, // Ya viene como array del service
+    buyerEmail: purchase.buyerEmail,
+    buyerName: purchase.buyerName,
     status: purchase.status,
     amount: purchase.amount,
     currency: purchase.currency,
@@ -47,11 +53,11 @@ const funcGetPurchases = async (
   // Respuesta exitosa
   return ApiResponseBuilder.success(
     {
-      email: email,
+      email: email || null,
       count: formattedPurchases.length,
       purchases: formattedPurchases,
     },
-    'Purchases retrieved successfully'
+    email ? 'Purchases retrieved successfully for email' : 'All purchases retrieved successfully'
   );
 };
 

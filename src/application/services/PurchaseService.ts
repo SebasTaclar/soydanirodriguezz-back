@@ -194,7 +194,7 @@ export class PurchaseService {
           buyerEmail: email,
         },
         orderBy: {
-          createdAt: 'desc',
+          updatedAt: 'desc',
         },
       });
 
@@ -219,6 +219,40 @@ export class PurchaseService {
       return formattedPurchases;
     } catch (error) {
       Logger.error('Error getting purchases by email', error);
+      throw error;
+    }
+  }
+
+  async getAllPurchases(): Promise<any[]> {
+    try {
+      Logger.info('Getting all purchases');
+
+      const purchases = await this.prisma.purchase.findMany({
+        orderBy: {
+          updatedAt: 'desc',
+        },
+      });
+
+      // Formatear la respuesta para incluir wallpaperNumbers como array
+      const formattedPurchases = purchases.map((purchase) => ({
+        id: purchase.id,
+        wallpaperNumbers: JSON.parse(purchase.wallpaperNumbers), // Parsear JSON a array
+        buyerEmail: purchase.buyerEmail,
+        buyerName: purchase.buyerName,
+        status: purchase.status,
+        amount: purchase.amount,
+        currency: purchase.currency,
+        createdAt: purchase.createdAt,
+        updatedAt: purchase.updatedAt,
+      }));
+
+      Logger.info('All purchases retrieved successfully', {
+        count: formattedPurchases.length,
+      });
+
+      return formattedPurchases;
+    } catch (error) {
+      Logger.error('Error getting all purchases', error);
       throw error;
     }
   }
