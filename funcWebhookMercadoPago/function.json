@@ -16,6 +16,5 @@
       "name": "res"
     }
   ],
-  "scriptFile": "../dist/funcWebhookMercadoPago/index.js",
-  "entryPoint": "default"
+  "scriptFile": "../dist/funcWebhookMercadoPago/index.js"
 }

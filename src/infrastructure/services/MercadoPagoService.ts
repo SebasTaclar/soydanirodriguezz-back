@@ -6,6 +6,7 @@ export interface CreatePaymentData {
   buyerEmail: string;
   buyerName: string;
   buyerIdentificationNumber: string;
+  amount: number; // Cantidad en COP que viene desde el frontend
 }
 
 export interface PaymentCreationResult {
@@ -48,7 +49,7 @@ export class MercadoPagoService {
             title: `Wallpaper Digital #${data.wallpaperNumber}`,
             description: `Compra de wallpaper digital número ${data.wallpaperNumber}`,
             quantity: 1,
-            unit_price: 5000, // 15,000 COP
+            unit_price: data.amount, // Cantidad que viene desde el frontend
             currency_id: 'COP',
           },
         ],
@@ -115,10 +116,29 @@ export class MercadoPagoService {
 
   async getPaymentStatus(paymentId: string): Promise<any> {
     try {
-      // Este método se implementará cuando sea necesario consultar el estado
-      Logger.info('Getting payment status', { paymentId });
-      // Aquí iría la implementación para consultar el estado del pago
-      return null;
+      Logger.info('Getting payment status from Mercado Pago', { paymentId });
+
+      // Implementación real para consultar el estado del pago
+      const { Payment } = await import('mercadopago');
+      const payment = new Payment(this.client);
+
+      const response = await payment.get({ id: paymentId });
+
+      Logger.info('Payment status retrieved', {
+        paymentId,
+        status: response.status,
+        statusDetail: response.status_detail,
+      });
+
+      return {
+        id: response.id,
+        status: response.status,
+        statusDetail: response.status_detail,
+        transactionAmount: response.transaction_amount,
+        externalReference: response.external_reference,
+        dateApproved: response.date_approved,
+        dateCreated: response.date_created,
+      };
     } catch (error) {
       Logger.error('Error getting payment status', error);
       throw error;

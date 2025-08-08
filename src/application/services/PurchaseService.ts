@@ -11,6 +11,7 @@ export interface CreatePurchaseRequest {
   buyerEmail: string;
   buyerName: string;
   buyerIdentificationNumber: string;
+  amount: number; // Cantidad en COP que viene desde el frontend
 }
 
 export interface CreatePurchaseResponse {
@@ -60,12 +61,18 @@ export class PurchaseService {
         throw new Error('Identification number must be at least 6 characters long');
       }
 
+      // Validar que la cantidad sea válida
+      if (!request.amount || request.amount <= 0) {
+        throw new Error('Amount must be greater than 0');
+      }
+
       // Crear el pago en Mercado Pago
       const paymentData: CreatePaymentData = {
         wallpaperNumber: request.wallpaperNumber,
         buyerEmail: request.buyerEmail,
         buyerName: request.buyerName,
         buyerIdentificationNumber: request.buyerIdentificationNumber,
+        amount: request.amount,
       };
 
       const paymentResult: PaymentCreationResult =
@@ -81,7 +88,7 @@ export class PurchaseService {
           preferenceId: paymentResult.preferenceId,
           externalReference: paymentResult.externalReference,
           status: 'PENDING',
-          amount: 5000, // 15,000 COP
+          amount: request.amount, // Cantidad que viene desde el frontend
           currency: 'COP',
         },
       });

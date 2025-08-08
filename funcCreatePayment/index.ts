@@ -11,17 +11,21 @@ const funcCreatePayment = async (
   log: Logger
 ): Promise<unknown> => {
   // Validar campos requeridos
-  const { wallpaperNumber, buyerEmail, buyerName, buyerIdentificationNumber } = req.body;
+  const { wallpaperNumber, buyerEmail, buyerName, buyerIdentificationNumber, amount } = req.body;
 
-  if (!wallpaperNumber || !buyerEmail || !buyerName || !buyerIdentificationNumber) {
+  if (!wallpaperNumber || !buyerEmail || !buyerName || !buyerIdentificationNumber || !amount) {
     return ApiResponseBuilder.validationError([
-      'Missing required fields: wallpaperNumber, buyerEmail, buyerName, buyerIdentificationNumber',
+      'Missing required fields: wallpaperNumber, buyerEmail, buyerName, buyerIdentificationNumber, amount',
     ]);
   }
 
   // Validar tipos de datos
   if (typeof wallpaperNumber !== 'number' || wallpaperNumber <= 0) {
     return ApiResponseBuilder.validationError(['wallpaperNumber must be a positive number']);
+  }
+
+  if (typeof amount !== 'number' || amount <= 0) {
+    return ApiResponseBuilder.validationError(['amount must be a positive number']);
   }
 
   if (
@@ -40,6 +44,7 @@ const funcCreatePayment = async (
     buyerEmail: buyerEmail.trim(),
     buyerName: buyerName.trim(),
     buyerIdentificationNumber: buyerIdentificationNumber.trim(),
+    amount: amount,
   };
 
   log.logInfo('Creating purchase for wallpaper', {
