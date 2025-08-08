@@ -11,17 +11,21 @@ const funcCreatePayment = async (
   log: Logger
 ): Promise<unknown> => {
   // Validar campos requeridos
-  const { wallpaperNumber, buyerEmail, buyerName, buyerIdentificationNumber, amount } = req.body;
+  const { wallpaperNumbers, buyerEmail, buyerName, buyerIdentificationNumber, amount } = req.body;
 
-  if (!wallpaperNumber || !buyerEmail || !buyerName || !buyerIdentificationNumber || !amount) {
+  if (!wallpaperNumbers || !buyerEmail || !buyerName || !buyerIdentificationNumber || !amount) {
     return ApiResponseBuilder.validationError([
-      'Missing required fields: wallpaperNumber, buyerEmail, buyerName, buyerIdentificationNumber, amount',
+      'Missing required fields: wallpaperNumbers, buyerEmail, buyerName, buyerIdentificationNumber, amount',
     ]);
   }
 
   // Validar tipos de datos
-  if (typeof wallpaperNumber !== 'number' || wallpaperNumber <= 0) {
-    return ApiResponseBuilder.validationError(['wallpaperNumber must be a positive number']);
+  if (!Array.isArray(wallpaperNumbers) || wallpaperNumbers.length === 0) {
+    return ApiResponseBuilder.validationError(['wallpaperNumbers must be a non-empty array']);
+  }
+
+  if (!wallpaperNumbers.every((num) => typeof num === 'number' && num > 0)) {
+    return ApiResponseBuilder.validationError(['All wallpaper numbers must be positive numbers']);
   }
 
   if (typeof amount !== 'number' || amount <= 0) {
@@ -40,15 +44,15 @@ const funcCreatePayment = async (
 
   // Crear request object
   const createPurchaseRequest: CreatePurchaseRequest = {
-    wallpaperNumber: wallpaperNumber,
+    wallpaperNumbers: wallpaperNumbers,
     buyerEmail: buyerEmail.trim(),
     buyerName: buyerName.trim(),
     buyerIdentificationNumber: buyerIdentificationNumber.trim(),
     amount: amount,
   };
 
-  log.logInfo('Creating purchase for wallpaper', {
-    wallpaperNumber,
+  log.logInfo('Creating purchase for wallpapers', {
+    wallpaperNumbers,
     buyerEmail: buyerEmail.trim(),
   });
 
@@ -59,7 +63,7 @@ const funcCreatePayment = async (
   log.logInfo('Purchase created successfully', {
     purchaseId: result.purchaseId,
     preferenceId: result.preferenceId,
-    wallpaperNumber: result.wallpaperNumber,
+    wallpaperNumbers: result.wallpaperNumbers,
   });
 
   // Respuesta exitosa
@@ -68,7 +72,7 @@ const funcCreatePayment = async (
       message: 'Payment created successfully',
       purchase: {
         id: result.purchaseId,
-        wallpaperNumber: result.wallpaperNumber,
+        wallpaperNumbers: result.wallpaperNumbers,
         amount: result.amount,
         currency: result.currency,
         status: 'PENDING',

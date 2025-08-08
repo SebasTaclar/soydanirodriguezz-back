@@ -2,11 +2,11 @@ import { MercadoPagoConfig, Preference } from 'mercadopago';
 import { Logger } from '../../shared/Logger';
 
 export interface CreatePaymentData {
-  wallpaperNumber: number;
+  wallpaperNumbers: number[]; // Array de números de wallpapers
   buyerEmail: string;
   buyerName: string;
   buyerIdentificationNumber: string;
-  amount: number; // Cantidad en COP que viene desde el frontend
+  amount: number; // Cantidad total en COP que viene desde el frontend
 }
 
 export interface PaymentCreationResult {
@@ -39,17 +39,26 @@ export class MercadoPagoService {
 
   async createPayment(data: CreatePaymentData): Promise<PaymentCreationResult> {
     try {
-      // Crear referencia externa única
-      const externalReference = `wallpaper_${data.wallpaperNumber}_${Date.now()}`;
+      // Crear referencia externa única con todos los wallpapers
+      const wallpapersStr = data.wallpaperNumbers.join('-');
+      const externalReference = `wallpapers_${wallpapersStr}_${Date.now()}`;
+
+      // Crear descripción con todos los wallpapers
+      const wallpapersList = data.wallpaperNumbers.join(', ');
+      const title =
+        data.wallpaperNumbers.length === 1
+          ? `Wallpaper Digital #${data.wallpaperNumbers[0]}`
+          : `${data.wallpaperNumbers.length} Wallpapers Digitales`;
+      const description = `Compra de wallpapers digitales: #${wallpapersList}`;
 
       const preferenceData = {
         items: [
           {
-            id: `wallpaper_${data.wallpaperNumber}`,
-            title: `Wallpaper Digital #${data.wallpaperNumber}`,
-            description: `Compra de wallpaper digital número ${data.wallpaperNumber}`,
+            id: `wallpapers_${wallpapersStr}`,
+            title: title,
+            description: description,
             quantity: 1,
-            unit_price: data.amount, // Cantidad que viene desde el frontend
+            unit_price: data.amount, // Cantidad total que viene desde el frontend
             currency_id: 'COP',
           },
         ],
@@ -77,7 +86,7 @@ export class MercadoPagoService {
           mode: 'not_specified',
         },
         metadata: {
-          wallpaper_number: data.wallpaperNumber,
+          wallpaper_numbers: data.wallpaperNumbers.join(','),
           buyer_identification: data.buyerIdentificationNumber,
           buyer_email: data.buyerEmail,
           buyer_name: data.buyerName,
@@ -86,7 +95,7 @@ export class MercadoPagoService {
 
       Logger.info('Creating Mercado Pago preference', {
         externalReference,
-        wallpaperNumber: data.wallpaperNumber,
+        wallpaperNumbers: data.wallpaperNumbers,
         buyerEmail: data.buyerEmail,
       });
 
