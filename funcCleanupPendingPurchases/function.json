@@ -1,0 +1,11 @@
+{
+  "bindings": [
+    {
+      "name": "cleanupTimer",
+      "type": "timerTrigger",
+      "direction": "in",
+      "schedule": "%CLEANUP_SCHEDULE%"
+    }
+  ],
+  "scriptFile": "../dist/funcCleanupPendingPurchases/index.js"
+}

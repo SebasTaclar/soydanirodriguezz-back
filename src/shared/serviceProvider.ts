@@ -2,6 +2,7 @@ import { Logger } from './Logger';
 import { AuthService } from '../application/services/AuthService';
 import { HealthService } from '../application/services/HealthService';
 import { PurchaseService } from '../application/services/PurchaseService';
+import { CleanupService } from '../application/services/CleanupService';
 import { MercadoPagoService } from '../infrastructure/services/MercadoPagoService';
 import { UserPrismaAdapter } from '../infrastructure/DbAdapters/UserPrismaAdapter';
 import { IUserDataSource } from '../domain/interfaces/IUserDataSource';
@@ -44,6 +45,14 @@ export class ServiceProvider {
   }
 
   /**
+   * Crea una instancia de CleanupService con sus dependencias inyectadas
+   */
+  static getCleanupService(logger: Logger): CleanupService {
+    const mercadoPagoService = this.getMercadoPagoService();
+    return new CleanupService(this.prismaClient, mercadoPagoService, logger);
+  }
+
+  /**
    * Crea una instancia de MercadoPagoService
    */
   static getMercadoPagoService(): MercadoPagoService {
@@ -62,6 +71,10 @@ export const getHealthService = (logger: Logger): HealthService => {
 
 export const getPurchaseService = (): PurchaseService => {
   return ServiceProvider.getPurchaseService();
+};
+
+export const getCleanupService = (logger: Logger): CleanupService => {
+  return ServiceProvider.getCleanupService(logger);
 };
 
 export const getMercadoPagoService = (): MercadoPagoService => {
