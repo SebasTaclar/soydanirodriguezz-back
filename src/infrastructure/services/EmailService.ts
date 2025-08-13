@@ -1,6 +1,8 @@
 import { EmailClient } from '@azure/communication-email';
 import { Logger } from '../../shared/Logger';
 import { getPurchaseService } from '../../shared/serviceProvider';
+import * as https from 'https';
+import * as http from 'http';
 
 export interface EmailData {
   toEmail: string;
@@ -507,18 +509,91 @@ export class EmailService {
     return `rgb(${r}, ${g}, ${b})`;
   }
 
+  private async downloadImageAsBase64(url: string): Promise<string | null> {
+    return new Promise((resolve) => {
+      try {
+        this.logger.logInfo('Downloading image from URL', { url });
+
+        const protocol = url.startsWith('https') ? https : http;
+
+        protocol
+          .get(url, (response) => {
+            if (response.statusCode !== 200) {
+              this.logger.logWarning('Failed to download image', {
+                url,
+                statusCode: response.statusCode,
+              });
+              resolve(null);
+              return;
+            }
+
+            const chunks: Buffer[] = [];
+
+            response.on('data', (chunk) => {
+              chunks.push(chunk);
+            });
+
+            response.on('end', () => {
+              try {
+                const buffer = Buffer.concat(chunks);
+                const base64 = buffer.toString('base64');
+
+                this.logger.logInfo('Image downloaded successfully', {
+                  url,
+                  sizeKB: Math.round(buffer.length / 1024),
+                });
+
+                resolve(base64);
+              } catch (error) {
+                this.logger.logError('Error processing downloaded image', { url, error });
+                resolve(null);
+              }
+            });
+
+            response.on('error', (error) => {
+              this.logger.logError('Error downloading image', { url, error });
+              resolve(null);
+            });
+          })
+          .on('error', (error) => {
+            this.logger.logError('Request error downloading image', { url, error });
+            resolve(null);
+          });
+      } catch (error) {
+        this.logger.logError('Unexpected error downloading image', { url, error });
+        resolve(null);
+      }
+    });
+  }
+
   private async generateWallpaperAttachment(
     backgroundColor: string,
     wallpaperNumbers: number[]
   ): Promise<EmailAttachment> {
     try {
-      this.logger.logInfo('Generating simple color wallpaper', {
+      this.logger.logInfo('Generating wallpaper with remote image', {
         backgroundColor,
         wallpaperNumbers,
         count: wallpaperNumbers.length,
       });
 
-      // Crear un wallpaper simple solo con colores y texto
+      // URL de la imagen en Azure Blob Storage
+      const imageUrl =
+        'https://ed90mas1files.blob.core.windows.net/moto/Screenshot%202025-08-13%20131752.png';
+
+      // Intentar descargar la imagen
+      const imageBase64 = await this.downloadImageAsBase64(imageUrl);
+
+      // Crear el elemento image solo si se descargó correctamente
+      const imageElement = imageBase64
+        ? `<image href="data:image/png;base64,${imageBase64}" 
+               x="140" y="460" 
+               width="800" height="600" 
+               filter="url(#drop-shadow)"
+               preserveAspectRatio="xMidYMid meet"/>`
+        : '<!-- Imagen no disponible -->';
+
+      // Crear un wallpaper con la imagen remota o sin ella
       const wallpaperSvg = `
       <svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">
         <defs>
@@ -533,6 +608,11 @@ export class EmailService {
             <stop offset="0%" style="stop-color:rgba(255,255,255,0.3);stop-opacity:1" />
             <stop offset="100%" style="stop-color:rgba(255,255,255,0.1);stop-opacity:1" />
           </radialGradient>
+          
+          <!-- Sombra para la imagen -->
+          <filter id="drop-shadow">
+            <feDropShadow dx="0" dy="8" stdDeviation="16" flood-color="rgba(0,0,0,0.3)"/>
+          </filter>
         </defs>
         
         <!-- Fondo con el color único -->
@@ -553,44 +633,71 @@ export class EmailService {
               rx="20"/>
         
         <!-- Círculo central decorativo -->
-        <circle cx="540" cy="960" r="300" 
+        <circle cx="540" cy="760" r="250" 
                 fill="url(#center-circle)" 
                 stroke="rgba(255,255,255,0.4)" 
                 stroke-width="3"/>
         
         <!-- Título principal -->
-        <text x="540" y="300" text-anchor="middle" 
+        <text x="540" y="240" text-anchor="middle" 
               font-family="Arial, sans-serif" font-size="54" font-weight="bold" 
               fill="rgba(255,255,255,0.95)">
           WALLPAPER DIGITAL
         </text>
         
         <!-- Subtítulo -->
-        <text x="540" y="360" text-anchor="middle" 
+        <text x="540" y="300" text-anchor="middle" 
               font-family="Arial, sans-serif" font-size="24" 
               fill="rgba(255,255,255,0.8)">
           Colección Exclusiva
         </text>
         
         <!-- Línea decorativa superior -->
-        <line x1="290" y1="400" x2="790" y2="400" 
+        <line x1="290" y1="340" x2="790" y2="340" 
               stroke="rgba(255,255,255,0.6)" stroke-width="3"/>
         
-        <!-- Números de wallpapers comprados (centrado) -->
-        <text x="540" y="860" text-anchor="middle" 
+        <!-- Imagen de la moto (si está disponible) -->
+        ${imageElement}
+        
+        <!-- Números de wallpapers comprados -->
+        <text x="540" y="1180" text-anchor="middle" 
               font-family="Arial, sans-serif" font-size="36" font-weight="bold"
               fill="rgba(255,255,255,0.9)">
           Wallpapers Comprados:
         </text>
         
-        <text x="540" y="920" text-anchor="middle" 
+        <text x="540" y="1240" text-anchor="middle" 
               font-family="Arial, sans-serif" font-size="48" font-weight="bold"
               fill="rgba(255,255,255,1)">
           ${wallpaperNumbers.map((n) => `#${n}`).join(' • ')}
         </text>
         
+        <!-- Cantidad total -->
+        <text x="540" y="1320" text-anchor="middle" 
+              font-family="Arial, sans-serif" font-size="32" font-weight="bold"
+              fill="rgba(255,255,255,0.9)">
+          ${wallpaperNumbers.length} Wallpaper${wallpaperNumbers.length !== 1 ? 's' : ''} Exclusivo${wallpaperNumbers.length !== 1 ? 's' : ''}
+        </text>
+        
+        <!-- Línea decorativa inferior -->
+        <line x1="290" y1="1380" x2="790" y2="1380" 
+              stroke="rgba(255,255,255,0.6)" stroke-width="3"/>
+        
+        <!-- Información del color único -->
+        <text x="540" y="1520" text-anchor="middle" 
+              font-family="Arial, sans-serif" font-size="28" 
+              fill="rgba(255,255,255,0.8)">
+          Color Único Personalizado
+        </text>
+        
+        <text x="540" y="1570" text-anchor="middle" 
+              font-family="Arial, sans-serif" font-size="20" 
+              fill="rgba(255,255,255,0.7)">
+          ${backgroundColor}
+        </text>
+        
         <!-- Recuadro con el color -->
-        <rect x="440" y="1560" width="200" height="60" 
+        <rect x="440" y="1600" width="200" height="60" 
               fill="${backgroundColor}" 
               stroke="rgba(255,255,255,0.5)" 
               stroke-width="2" 
@@ -600,7 +707,7 @@ export class EmailService {
         <text x="540" y="1750" text-anchor="middle" 
               font-family="Arial, sans-serif" font-size="18" 
               fill="rgba(255,255,255,0.5)">
-          digitalWallpapers
+          digitalWallpapers.com
         </text>
         
         <!-- Fecha/hora -->
@@ -614,8 +721,9 @@ export class EmailService {
       // Convertir SVG a base64 para el attachment
       const wallpaperBase64 = Buffer.from(wallpaperSvg).toString('base64');
 
-      this.logger.logInfo('Simple wallpaper generated successfully', {
+      this.logger.logInfo('Wallpaper generated successfully', {
         wallpaperNumbers,
+        hasImage: !!imageBase64,
         sizeKB: Math.round(Buffer.from(wallpaperSvg).length / 1024),
       });
 
@@ -625,7 +733,7 @@ export class EmailService {
         contentInBase64: wallpaperBase64,
       };
     } catch (error) {
-      this.logger.logError('Error creating simple wallpaper attachment', error);
+      this.logger.logError('Error creating wallpaper attachment', error);
       throw new Error(
         `Failed to create wallpaper: ${error instanceof Error ? error.message : 'Unknown error'}`
       );
