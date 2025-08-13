@@ -1,8 +1,6 @@
 import { EmailClient } from '@azure/communication-email';
 import { Logger } from '../../shared/Logger';
 import { getPurchaseService } from '../../shared/serviceProvider';
-import * as fs from 'fs';
-import * as path from 'path';
 
 export interface EmailData {
   toEmail: string;
@@ -10,6 +8,13 @@ export interface EmailData {
   subject: string;
   htmlContent: string;
   textContent?: string;
+  attachments?: EmailAttachment[];
+}
+
+export interface EmailAttachment {
+  name: string;
+  contentType: string;
+  contentInBase64: string;
 }
 
 export interface PaymentEmailData {
@@ -61,9 +66,10 @@ export class EmailService {
       this.logger.logInfo('Sending email', {
         toEmail: emailData.toEmail,
         subject: emailData.subject,
+        attachmentCount: emailData.attachments?.length || 0,
       });
 
-      const message = {
+      const message: any = {
         senderAddress: this.senderEmail,
         content: {
           subject: emailData.subject,
@@ -80,6 +86,15 @@ export class EmailService {
         },
       };
 
+      // Agregar attachments si existen
+      if (emailData.attachments && emailData.attachments.length > 0) {
+        message.attachments = emailData.attachments.map((attachment) => ({
+          name: attachment.name,
+          contentType: attachment.contentType,
+          contentInBase64: attachment.contentInBase64,
+        }));
+      }
+
       const poller = await this.emailClient.beginSend(message);
       const result = await poller.pollUntilDone();
 
@@ -87,6 +102,7 @@ export class EmailService {
         toEmail: emailData.toEmail,
         messageId: result.id,
         status: result.status,
+        attachmentCount: emailData.attachments?.length || 0,
       });
     } catch (error) {
       this.logger.logError('Error sending email', {
@@ -105,11 +121,23 @@ export class EmailService {
         wallpaperNumbers: paymentData.wallpaperNumbers,
       });
 
+      // Generar attachment de wallpaper personalizado con color único
+      const uniqueColor = this.generateUniqueColor(paymentData.wallpaperNumbers);
+      const imageAttachment = await this.generateWallpaperAttachment(
+        uniqueColor,
+        paymentData.wallpaperNumbers
+      );
+
       const emailData: EmailData = {
         toEmail: paymentData.buyerEmail,
         toName: paymentData.buyerName,
         subject: this.getEmailSubject(paymentData.status),
-        htmlContent: this.generatePaymentEmailTemplate(paymentData),
+        htmlContent: this.generatePaymentEmailTemplate(
+          paymentData,
+          uniqueColor,
+          imageAttachment.name
+        ),
+        attachments: [imageAttachment],
       };
 
       await this.sendEmail(emailData);
@@ -196,7 +224,11 @@ export class EmailService {
     }
   }
 
-  private generatePaymentEmailTemplate(data: PaymentEmailData): string {
+  private generatePaymentEmailTemplate(
+    data: PaymentEmailData,
+    uniqueColor: string,
+    attachmentName: string
+  ): string {
     const statusIcon = this.getStatusIcon(data.status);
     const statusMessage = this.getStatusMessage(data.status);
     const wallpapersList = data.wallpaperNumbers.map((num) => `#${num}`).join(', ');
@@ -213,10 +245,6 @@ export class EmailService {
       hour: '2-digit',
       minute: '2-digit',
     });
-
-    // Generar color único basado en los números de wallpapers
-    const uniqueColor = this.generateUniqueColor(data.wallpaperNumbers);
-    const motoImageDataUrl = this.generateMotoImageWithBackground(uniqueColor);
 
     return `
     <!DOCTYPE html>
@@ -257,11 +285,18 @@ export class EmailService {
                 </div>
 
                 <div class="moto-preview">
-                    <div class="preview-title">🏍️ Vista previa de tu wallpaper personalizado</div>
-                    <p style="color: #666; margin-bottom: 15px;">Color único generado para tus wallpapers: ${wallpapersList}</p>
-                    <img src="${motoImageDataUrl}" alt="Wallpaper personalizado con moto" style="border: 2px solid ${uniqueColor};" />
+                    <div class="preview-title">� Wallpaper personalizado adjunto</div>
+                    <p style="color: #666; margin-bottom: 15px;">Wallpaper único generado para: ${wallpapersList}</p>
+                    <div style="background: ${uniqueColor}; padding: 20px; border-radius: 10px; margin: 15px 0;">
+                        <p style="color: white; text-align: center; font-weight: bold; margin: 0;">
+                            📎 ${attachmentName}
+                        </p>
+                        <p style="color: rgba(255,255,255,0.9); text-align: center; font-size: 14px; margin: 5px 0 0 0;">
+                            Tu wallpaper personalizado está adjunto a este email
+                        </p>
+                    </div>
                     <p style="color: #888; font-size: 12px; margin-top: 10px;">
-                        *Esta es una vista previa. El wallpaper final tendrá mayor resolución y calidad.
+                        *Descarga el archivo adjunto para ver tu wallpaper personalizado en alta resolución.
                     </p>
                 </div>
                 
@@ -472,103 +507,129 @@ export class EmailService {
     return `rgb(${r}, ${g}, ${b})`;
   }
 
-  private generateMotoImageWithBackground(backgroundColor: string): string {
+  private async generateWallpaperAttachment(
+    backgroundColor: string,
+    wallpaperNumbers: number[]
+  ): Promise<EmailAttachment> {
     try {
-      // Ruta de la imagen de la moto
-      const motoImagePath = path.join(process.cwd(), 'public', 'images', 'moto.png');
+      this.logger.logInfo('Generating simple color wallpaper', {
+        backgroundColor,
+        wallpaperNumbers,
+        count: wallpaperNumbers.length,
+      });
 
-      // Verificar si la imagen existe
-      if (!fs.existsSync(motoImagePath)) {
-        this.logger.logWarning('Moto image not found, using placeholder', { path: motoImagePath });
-        return this.generatePlaceholderImage(backgroundColor);
-      }
-
-      // Leer la imagen y convertirla a base64
-      const motoImageBuffer = fs.readFileSync(motoImagePath);
-      const motoImageBase64 = motoImageBuffer.toString('base64');
-      const motoImageDataUrl = `data:image/png;base64,${motoImageBase64}`;
-
-      // Crear un SVG que contenga la imagen real con un marco de color
-      const framedMotoSvg = `
-      <svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
+      // Crear un wallpaper simple solo con colores y texto
+      const wallpaperSvg = `
+      <svg width="1080" height="1920" xmlns="http://www.w3.org/2000/svg">
         <defs>
-          <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <!-- Gradiente del color único -->
+          <linearGradient id="unique-bg" x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" style="stop-color:${backgroundColor};stop-opacity:1" />
             <stop offset="100%" style="stop-color:${this.darkenColor(backgroundColor, 20)};stop-opacity:1" />
           </linearGradient>
-          <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-            <feDropShadow dx="3" dy="3" stdDeviation="5" flood-color="rgba(0,0,0,0.3)"/>
-          </filter>
-          <clipPath id="circle-clip">
-            <circle cx="200" cy="150" r="120"/>
-          </clipPath>
+          
+          <!-- Gradiente para el círculo central -->
+          <radialGradient id="center-circle" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" style="stop-color:rgba(255,255,255,0.3);stop-opacity:1" />
+            <stop offset="100%" style="stop-color:rgba(255,255,255,0.1);stop-opacity:1" />
+          </radialGradient>
         </defs>
         
-        <!-- Fondo degradado -->
-        <rect width="400" height="300" fill="url(#bg-gradient)" rx="15"/>
+        <!-- Fondo con el color único -->
+        <rect width="1080" height="1920" fill="url(#unique-bg)"/>
         
-        <!-- Marco circular con sombra -->
-        <circle cx="200" cy="150" r="125" fill="rgba(255,255,255,0.1)" filter="url(#shadow)"/>
-        <circle cx="200" cy="150" r="120" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="3"/>
+        <!-- Recuadro/marco decorativo principal -->
+        <rect x="60" y="60" width="960" height="1800" 
+              fill="none" 
+              stroke="rgba(255,255,255,0.3)" 
+              stroke-width="6" 
+              rx="30"/>
+              
+        <!-- Marco interno -->
+        <rect x="120" y="120" width="840" height="1680" 
+              fill="none" 
+              stroke="rgba(255,255,255,0.2)" 
+              stroke-width="2" 
+              rx="20"/>
         
-        <!-- Imagen de la moto dentro del círculo -->
-        <image href="${motoImageDataUrl}" 
-               x="80" y="30" 
-               width="240" height="240" 
-               clip-path="url(#circle-clip)"
-               preserveAspectRatio="xMidYMid slice"/>
+        <!-- Círculo central decorativo -->
+        <circle cx="540" cy="960" r="300" 
+                fill="url(#center-circle)" 
+                stroke="rgba(255,255,255,0.4)" 
+                stroke-width="3"/>
         
-        <!-- Borde decorativo -->
-        <circle cx="200" cy="150" r="120" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="2"/>
-        
-        <!-- Texto decorativo -->
-        <text x="200" y="30" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="rgba(255,255,255,0.9)">
+        <!-- Título principal -->
+        <text x="540" y="300" text-anchor="middle" 
+              font-family="Arial, sans-serif" font-size="54" font-weight="bold" 
+              fill="rgba(255,255,255,0.95)">
           WALLPAPER DIGITAL
         </text>
-        <text x="200" y="285" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.7)">
-          Diseño único personalizado
+        
+        <!-- Subtítulo -->
+        <text x="540" y="360" text-anchor="middle" 
+              font-family="Arial, sans-serif" font-size="24" 
+              fill="rgba(255,255,255,0.8)">
+          Colección Exclusiva
+        </text>
+        
+        <!-- Línea decorativa superior -->
+        <line x1="290" y1="400" x2="790" y2="400" 
+              stroke="rgba(255,255,255,0.6)" stroke-width="3"/>
+        
+        <!-- Números de wallpapers comprados (centrado) -->
+        <text x="540" y="860" text-anchor="middle" 
+              font-family="Arial, sans-serif" font-size="36" font-weight="bold"
+              fill="rgba(255,255,255,0.9)">
+          Wallpapers Comprados:
+        </text>
+        
+        <text x="540" y="920" text-anchor="middle" 
+              font-family="Arial, sans-serif" font-size="48" font-weight="bold"
+              fill="rgba(255,255,255,1)">
+          ${wallpaperNumbers.map((n) => `#${n}`).join(' • ')}
+        </text>
+        
+        <!-- Recuadro con el color -->
+        <rect x="440" y="1560" width="200" height="60" 
+              fill="${backgroundColor}" 
+              stroke="rgba(255,255,255,0.5)" 
+              stroke-width="2" 
+              rx="10"/>
+        
+        <!-- Marca de agua final -->
+        <text x="540" y="1750" text-anchor="middle" 
+              font-family="Arial, sans-serif" font-size="18" 
+              fill="rgba(255,255,255,0.5)">
+          digitalWallpapers
+        </text>
+        
+        <!-- Fecha/hora -->
+        <text x="540" y="1800" text-anchor="middle" 
+              font-family="Arial, sans-serif" font-size="14" 
+              fill="rgba(255,255,255,0.4)">
+          Generado: ${new Date().toLocaleDateString('es-CO')}
         </text>
       </svg>`;
 
-      // Convertir SVG a base64 data URL
-      const base64Svg = Buffer.from(framedMotoSvg).toString('base64');
-      return `data:image/svg+xml;base64,${base64Svg}`;
+      // Convertir SVG a base64 para el attachment
+      const wallpaperBase64 = Buffer.from(wallpaperSvg).toString('base64');
+
+      this.logger.logInfo('Simple wallpaper generated successfully', {
+        wallpaperNumbers,
+        sizeKB: Math.round(Buffer.from(wallpaperSvg).length / 1024),
+      });
+
+      return {
+        name: `wallpaper_${wallpaperNumbers.join('-')}_${Date.now()}.svg`,
+        contentType: 'image/svg+xml',
+        contentInBase64: wallpaperBase64,
+      };
     } catch (error) {
-      this.logger.logError('Error generating moto image with background', error);
-      return this.generatePlaceholderImage(backgroundColor);
+      this.logger.logError('Error creating simple wallpaper attachment', error);
+      throw new Error(
+        `Failed to create wallpaper: ${error instanceof Error ? error.message : 'Unknown error'}`
+      );
     }
-  }
-
-  private generatePlaceholderImage(backgroundColor: string): string {
-    // Imagen de respaldo simple si no se puede cargar la imagen real
-    const placeholderSvg = `
-    <svg width="400" height="300" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="bg-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" style="stop-color:${backgroundColor};stop-opacity:1" />
-          <stop offset="100%" style="stop-color:${this.darkenColor(backgroundColor, 20)};stop-opacity:1" />
-        </linearGradient>
-      </defs>
-      
-      <!-- Fondo degradado -->
-      <rect width="400" height="300" fill="url(#bg-gradient)" rx="15"/>
-      
-      <!-- Ícono de moto simplificado -->
-      <circle cx="200" cy="150" r="120" fill="rgba(255,255,255,0.1)" stroke="rgba(255,255,255,0.3)" stroke-width="3"/>
-      
-      <text x="200" y="140" text-anchor="middle" font-family="Arial, sans-serif" font-size="48" fill="rgba(255,255,255,0.8)">
-        🏍️
-      </text>
-      <text x="200" y="170" text-anchor="middle" font-family="Arial, sans-serif" font-size="16" font-weight="bold" fill="rgba(255,255,255,0.9)">
-        WALLPAPER DIGITAL
-      </text>
-      <text x="200" y="285" text-anchor="middle" font-family="Arial, sans-serif" font-size="12" fill="rgba(255,255,255,0.7)">
-        Diseño único personalizado
-      </text>
-    </svg>`;
-
-    const base64Svg = Buffer.from(placeholderSvg).toString('base64');
-    return `data:image/svg+xml;base64,${base64Svg}`;
   }
 
   private darkenColor(color: string, percent: number): string {
@@ -595,5 +656,39 @@ export class EmailService {
     }
 
     return color;
+  }
+
+  // Método de prueba que usa el sistema real de emails con datos mockeados
+  async sendLoginTestEmail(userEmail: string, userName: string): Promise<void> {
+    try {
+      this.logger.logInfo('Sending login test email using payment confirmation system', {
+        userEmail,
+      });
+
+      // Datos mockeados para la prueba usando el sistema real
+      const mockPaymentData: PaymentEmailData = {
+        buyerEmail: userEmail,
+        buyerName: userName,
+        wallpaperNumbers: [1, 5, 9], // Números de prueba
+        amount: 15000, // $15.000 COP de prueba
+        currency: 'COP',
+        status: 'APPROVED', // Status de prueba
+        paymentId: 'TEST_LOGIN_' + Date.now(), // ID único de prueba
+        purchaseDate: new Date(),
+      };
+
+      // Usar el método real de confirmación de pago
+      await this.sendPaymentConfirmationEmail(mockPaymentData);
+
+      this.logger.logInfo('Login test email sent successfully using real payment system', {
+        userEmail,
+      });
+    } catch (error) {
+      this.logger.logError('Error sending login test email', {
+        userEmail,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+      // No relanzamos el error para no afectar el flujo de login
+    }
   }
 }
