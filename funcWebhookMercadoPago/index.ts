@@ -2,7 +2,11 @@ import { Context, HttpRequest } from '@azure/functions';
 import { Logger } from '../src/shared/Logger';
 import { withApiHandler } from '../src/shared/apiHandler';
 import { ApiResponseBuilder } from '../src/shared/ApiResponse';
-import { getPurchaseService, getMercadoPagoService } from '../src/shared/serviceProvider';
+import {
+  getPurchaseService,
+  getMercadoPagoService,
+  getEmailService,
+} from '../src/shared/serviceProvider';
 
 const funcWebhookMercadoPago = async (
   _context: Context,
@@ -60,6 +64,25 @@ const funcWebhookMercadoPago = async (
         status: mappedStatus,
         externalReference: paymentDetails.externalReference,
       });
+
+      // Enviar email de confirmación para cualquier estado de pago
+      try {
+        const emailService = getEmailService(log);
+        const paymentWebhookData = {
+          id: paymentDetails.id.toString(),
+          status: paymentDetails.status,
+          externalReference: paymentDetails.externalReference,
+          transactionAmount: paymentDetails.transactionAmount,
+          paymentMethodId: paymentDetails.paymentMethodId,
+          dateApproved: paymentDetails.dateApproved,
+          dateCreated: paymentDetails.dateCreated,
+        };
+
+        await emailService.sendPaymentNotificationFromWebhook(paymentWebhookData, mappedStatus);
+      } catch (emailError) {
+        log.logError('Error sending payment notification email', emailError);
+        // No fallar el webhook por un error de email
+      }
 
       return ApiResponseBuilder.success({
         message: 'Webhook processed successfully',

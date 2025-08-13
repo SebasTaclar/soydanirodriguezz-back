@@ -4,6 +4,7 @@ import { HealthService } from '../application/services/HealthService';
 import { PurchaseService } from '../application/services/PurchaseService';
 import { CleanupService } from '../application/services/CleanupService';
 import { MercadoPagoService } from '../infrastructure/services/MercadoPagoService';
+import { EmailService } from '../infrastructure/services/EmailService';
 import { UserPrismaAdapter } from '../infrastructure/DbAdapters/UserPrismaAdapter';
 import { IUserDataSource } from '../domain/interfaces/IUserDataSource';
 import { getPrismaClient } from '../config/PrismaClient';
@@ -53,6 +54,13 @@ export class ServiceProvider {
   }
 
   /**
+   * Crea una instancia de EmailService con sus dependencias inyectadas
+   */
+  static getEmailService(logger: Logger): EmailService {
+    return new EmailService(logger);
+  }
+
+  /**
    * Crea una instancia de MercadoPagoService
    */
   static getMercadoPagoService(): MercadoPagoService {
@@ -75,6 +83,10 @@ export const getPurchaseService = (): PurchaseService => {
 
 export const getCleanupService = (logger: Logger): CleanupService => {
   return ServiceProvider.getCleanupService(logger);
+};
+
+export const getEmailService = (logger: Logger): EmailService => {
+  return ServiceProvider.getEmailService(logger);
 };
 
 export const getMercadoPagoService = (): MercadoPagoService => {
