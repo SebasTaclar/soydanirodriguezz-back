@@ -123,23 +123,38 @@ export class EmailService {
         wallpaperNumbers: paymentData.wallpaperNumbers,
       });
 
-      // Generar attachment de wallpaper personalizado con color único
-      const uniqueColor = this.generateUniqueColor(paymentData.wallpaperNumbers);
-      const imageAttachment = await this.generateWallpaperAttachment(
-        uniqueColor,
-        paymentData.wallpaperNumbers
-      );
+      // Solo generar wallpaper si el pago está aprobado
+      let attachments: EmailAttachment[] = [];
+      let uniqueColor = '#667eea'; // Color por defecto
+      let attachmentName = '';
+
+      if (paymentData.status.toUpperCase() === 'APPROVED') {
+        this.logger.logInfo('Payment approved - generating wallpaper attachment', {
+          buyerEmail: paymentData.buyerEmail,
+        });
+
+        // Generar attachment de wallpaper personalizado con color único
+        uniqueColor = this.generateUniqueColor(paymentData.wallpaperNumbers);
+        const imageAttachment = await this.generateWallpaperAttachment(
+          uniqueColor,
+          paymentData.wallpaperNumbers
+        );
+        attachments = [imageAttachment];
+        attachmentName = imageAttachment.name;
+      } else {
+        this.logger.logInfo('Payment not approved - sending notification without wallpaper', {
+          buyerEmail: paymentData.buyerEmail,
+          status: paymentData.status,
+        });
+        uniqueColor = this.generateUniqueColor(paymentData.wallpaperNumbers);
+      }
 
       const emailData: EmailData = {
         toEmail: paymentData.buyerEmail,
         toName: paymentData.buyerName,
         subject: this.getEmailSubject(paymentData.status),
-        htmlContent: this.generatePaymentEmailTemplate(
-          paymentData,
-          uniqueColor,
-          imageAttachment.name
-        ),
-        attachments: [imageAttachment],
+        htmlContent: this.generatePaymentEmailTemplate(paymentData, uniqueColor, attachmentName),
+        attachments: attachments,
       };
 
       await this.sendEmail(emailData);
@@ -147,6 +162,7 @@ export class EmailService {
       this.logger.logInfo('Payment confirmation email sent successfully', {
         buyerEmail: paymentData.buyerEmail,
         status: paymentData.status,
+        hasWallpaper: paymentData.status.toUpperCase() === 'APPROVED',
       });
     } catch (error) {
       this.logger.logError('Error sending payment confirmation email', error);
@@ -248,6 +264,80 @@ export class EmailService {
       minute: '2-digit',
     });
 
+    // Mostrar sección de wallpaper según el estado del pago
+    let wallpaperSection = '';
+
+    if (data.status.toUpperCase() === 'APPROVED') {
+      wallpaperSection = `
+                <div class="moto-preview">
+                    <div class="preview-title">🎨 Wallpaper personalizado adjunto</div>
+                    <p style="color: #666; margin-bottom: 15px;">Wallpaper único generado para: ${wallpapersList}</p>
+                    <div style="background: ${uniqueColor}; padding: 20px; border-radius: 10px; margin: 15px 0;">
+                        <p style="color: white; text-align: center; font-weight: bold; margin: 0;">
+                            📎 ${attachmentName}
+                        </p>
+                        <p style="color: rgba(255,255,255,0.9); text-align: center; font-size: 14px; margin: 5px 0 0 0;">
+                            Tu wallpaper personalizado está adjunto a este email
+                        </p>
+                    </div>
+                    <p style="color: #888; font-size: 12px; margin-top: 10px;">
+                        *Descarga el archivo adjunto para ver tu wallpaper personalizado en alta resolución.
+                    </p>
+                </div>`;
+    } else if (data.status.toUpperCase() === 'CANCELLED') {
+      wallpaperSection = `
+                <div class="moto-preview">
+                    <div class="preview-title">⚠️ Wallpapers cancelados</div>
+                    <p style="color: #666; margin-bottom: 15px;">Tu compra fue cancelada y los wallpapers no serán enviados.</p>
+                    <div style="background: #f3f3f4; padding: 20px; border-radius: 10px; margin: 15px 0;">
+                        <p style="color: #383d41; text-align: center; font-weight: bold; margin: 0;">
+                            Pago cancelado
+                        </p>
+                        <p style="color: #383d41; text-align: center; font-size: 14px; margin: 5px 0 0 0;">
+                            Si fue un error, puedes intentar la compra nuevamente.
+                        </p>
+                    </div>
+                    <p style="color: #888; font-size: 12px; margin-top: 10px;">
+                        *No se enviarán wallpapers digitales para compras canceladas.
+                    </p>
+                </div>`;
+    } else if (data.status.toUpperCase() === 'REJECTED') {
+      wallpaperSection = `
+                <div class="moto-preview">
+                    <div class="preview-title">❌ Pago rechazado</div>
+                    <p style="color: #666; margin-bottom: 15px;">Tu pago fue rechazado y los wallpapers no fueron enviados.</p>
+                    <div style="background: #f8d7da; padding: 20px; border-radius: 10px; margin: 15px 0;">
+                        <p style="color: #721c24; text-align: center; font-weight: bold; margin: 0;">
+                            ❌ Pago no procesado
+                        </p>
+                        <p style="color: #721c24; text-align: center; font-size: 14px; margin: 5px 0 0 0;">
+                            Verifica tu método de pago e intenta nuevamente
+                        </p>
+                    </div>
+                    <p style="color: #888; font-size: 12px; margin-top: 10px;">
+                        *Puedes intentar realizar la compra nuevamente con otro método de pago.
+                    </p>
+                </div>`;
+    } else {
+      // Solo para PENDING
+      wallpaperSection = `
+                <div class="moto-preview">
+                    <div class="preview-title">📱 Wallpapers reservados</div>
+                    <p style="color: #666; margin-bottom: 15px;">Wallpapers reservados para: ${wallpapersList}</p>
+                    <div style="background: ${uniqueColor}; padding: 20px; border-radius: 10px; margin: 15px 0;">
+                        <p style="color: white; text-align: center; font-weight: bold; margin: 0;">
+                            ⏳ Esperando confirmación de pago
+                        </p>
+                        <p style="color: rgba(255,255,255,0.9); text-align: center; font-size: 14px; margin: 5px 0 0 0;">
+                            Los wallpapers se enviarán una vez que se confirme el pago
+                        </p>
+                    </div>
+                    <p style="color: #888; font-size: 12px; margin-top: 10px;">
+                        *Tu color único ya está reservado: ${uniqueColor}
+                    </p>
+                </div>`;
+    }
+
     return `
     <!DOCTYPE html>
     <html lang="es">
@@ -286,22 +376,8 @@ export class EmailService {
                     <h3 class="status-${data.status.toLowerCase()}">${statusMessage}</h3>
                 </div>
 
-                <div class="moto-preview">
-                    <div class="preview-title">� Wallpaper personalizado adjunto</div>
-                    <p style="color: #666; margin-bottom: 15px;">Wallpaper único generado para: ${wallpapersList}</p>
-                    <div style="background: ${uniqueColor}; padding: 20px; border-radius: 10px; margin: 15px 0;">
-                        <p style="color: white; text-align: center; font-weight: bold; margin: 0;">
-                            📎 ${attachmentName}
-                        </p>
-                        <p style="color: rgba(255,255,255,0.9); text-align: center; font-size: 14px; margin: 5px 0 0 0;">
-                            Tu wallpaper personalizado está adjunto a este email
-                        </p>
-                    </div>
-                    <p style="color: #888; font-size: 12px; margin-top: 10px;">
-                        *Descarga el archivo adjunto para ver tu wallpaper personalizado en alta resolución.
-                    </p>
-                </div>
-                
+                ${wallpaperSection}
+
                 <div class="wallpaper-list">
                     <h4>📱 Detalles de tu compra:</h4>
                     <ul>
