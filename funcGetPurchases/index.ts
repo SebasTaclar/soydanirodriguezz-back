@@ -43,6 +43,7 @@ const funcGetPurchases = async (
     wallpaperNumbers: purchase.wallpaperNumbers, // Ya viene como array del service
     buyerEmail: purchase.buyerEmail,
     buyerName: purchase.buyerName,
+    buyerContactNumber: purchase.buyerContactNumber,
     status: purchase.status,
     amount: purchase.amount,
     currency: purchase.currency,

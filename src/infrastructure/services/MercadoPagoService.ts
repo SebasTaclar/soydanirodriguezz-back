@@ -6,6 +6,7 @@ export interface CreatePaymentData {
   buyerEmail: string;
   buyerName: string;
   buyerIdentificationNumber: string;
+  buyerContactNumber: string; // Número de contacto/teléfono
   amount: number; // Cantidad total en COP que viene desde el frontend
 }
 
@@ -65,6 +66,9 @@ export class MercadoPagoService {
         payer: {
           name: data.buyerName,
           email: data.buyerEmail,
+          phone: {
+            number: data.buyerContactNumber,
+          },
           identification: {
             type: 'CC', // Cédula de Ciudadanía (Colombia)
             number: data.buyerIdentificationNumber,
@@ -90,6 +94,7 @@ export class MercadoPagoService {
           buyer_identification: data.buyerIdentificationNumber,
           buyer_email: data.buyerEmail,
           buyer_name: data.buyerName,
+          buyer_contact_number: data.buyerContactNumber,
         },
       };
 

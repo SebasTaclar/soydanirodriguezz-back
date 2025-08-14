@@ -11,6 +11,7 @@ export interface CreatePurchaseRequest {
   buyerEmail: string;
   buyerName: string;
   buyerIdentificationNumber: string;
+  buyerContactNumber: string; // Número de contacto/teléfono
   amount: number; // Cantidad total en COP que viene desde el frontend
 }
 
@@ -68,6 +69,11 @@ export class PurchaseService {
         throw new Error('Identification number must be at least 6 characters long');
       }
 
+      // Validar número de contacto
+      if (!request.buyerContactNumber || request.buyerContactNumber.trim().length < 7) {
+        throw new Error('Contact number must be at least 7 characters long');
+      }
+
       // Validar que la cantidad sea válida
       if (!request.amount || request.amount <= 0) {
         throw new Error('Amount must be greater than 0');
@@ -79,6 +85,7 @@ export class PurchaseService {
         buyerEmail: request.buyerEmail,
         buyerName: request.buyerName,
         buyerIdentificationNumber: request.buyerIdentificationNumber,
+        buyerContactNumber: request.buyerContactNumber,
         amount: request.amount,
       };
 
@@ -92,6 +99,7 @@ export class PurchaseService {
           buyerEmail: request.buyerEmail,
           buyerName: request.buyerName,
           buyerIdentificationNumber: request.buyerIdentificationNumber,
+          buyerContactNumber: request.buyerContactNumber,
           preferenceId: paymentResult.preferenceId,
           externalReference: paymentResult.externalReference,
           status: 'PENDING',
@@ -204,6 +212,7 @@ export class PurchaseService {
         wallpaperNumbers: JSON.parse(purchase.wallpaperNumbers), // Parsear JSON a array
         buyerEmail: purchase.buyerEmail,
         buyerName: purchase.buyerName,
+        buyerContactNumber: purchase.buyerContactNumber,
         status: purchase.status,
         amount: purchase.amount,
         currency: purchase.currency,
@@ -239,6 +248,7 @@ export class PurchaseService {
         wallpaperNumbers: JSON.parse(purchase.wallpaperNumbers), // Parsear JSON a array
         buyerEmail: purchase.buyerEmail,
         buyerName: purchase.buyerName,
+        buyerContactNumber: purchase.buyerContactNumber,
         status: purchase.status,
         amount: purchase.amount,
         currency: purchase.currency,

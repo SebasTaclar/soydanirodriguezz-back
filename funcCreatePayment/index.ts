@@ -11,11 +11,25 @@ const funcCreatePayment = async (
   log: Logger
 ): Promise<unknown> => {
   // Validar campos requeridos
-  const { wallpaperNumbers, buyerEmail, buyerName, buyerIdentificationNumber, amount } = req.body;
+  const {
+    wallpaperNumbers,
+    buyerEmail,
+    buyerName,
+    buyerIdentificationNumber,
+    buyerContactNumber,
+    amount,
+  } = req.body;
 
-  if (!wallpaperNumbers || !buyerEmail || !buyerName || !buyerIdentificationNumber || !amount) {
+  if (
+    !wallpaperNumbers ||
+    !buyerEmail ||
+    !buyerName ||
+    !buyerIdentificationNumber ||
+    !buyerContactNumber ||
+    !amount
+  ) {
     return ApiResponseBuilder.validationError([
-      'Missing required fields: wallpaperNumbers, buyerEmail, buyerName, buyerIdentificationNumber, amount',
+      'Missing required fields: wallpaperNumbers, buyerEmail, buyerName, buyerIdentificationNumber, buyerContactNumber, amount',
     ]);
   }
 
@@ -35,10 +49,11 @@ const funcCreatePayment = async (
   if (
     typeof buyerEmail !== 'string' ||
     typeof buyerName !== 'string' ||
-    typeof buyerIdentificationNumber !== 'string'
+    typeof buyerIdentificationNumber !== 'string' ||
+    typeof buyerContactNumber !== 'string'
   ) {
     return ApiResponseBuilder.validationError([
-      'buyerEmail, buyerName, and buyerIdentificationNumber must be strings',
+      'buyerEmail, buyerName, buyerIdentificationNumber, and buyerContactNumber must be strings',
     ]);
   }
 
@@ -48,6 +63,7 @@ const funcCreatePayment = async (
     buyerEmail: buyerEmail.trim(),
     buyerName: buyerName.trim(),
     buyerIdentificationNumber: buyerIdentificationNumber.trim(),
+    buyerContactNumber: buyerContactNumber.trim(),
     amount: amount,
   };
 

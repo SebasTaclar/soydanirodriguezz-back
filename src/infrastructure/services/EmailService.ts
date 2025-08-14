@@ -22,6 +22,7 @@ export interface EmailAttachment {
 export interface PaymentEmailData {
   buyerEmail: string;
   buyerName: string;
+  buyerContactNumber: string;
   wallpaperNumbers: number[];
   amount: number;
   currency: string;
@@ -205,6 +206,7 @@ export class EmailService {
       const emailData: PaymentEmailData = {
         buyerEmail: purchase.buyerEmail,
         buyerName: purchase.buyerName,
+        buyerContactNumber: purchase.buyerContactNumber || 'No proporcionado',
         wallpaperNumbers: purchase.wallpaperNumbers,
         amount: purchase.amount,
         currency: purchase.currency,
@@ -387,6 +389,7 @@ export class EmailService {
                         <li><strong>Estado:</strong> <span class="status-${data.status.toLowerCase()}">${data.status}</span></li>
                         <li><strong>ID de Pago:</strong> ${data.paymentId}</li>
                         <li><strong>Fecha:</strong> ${formattedDate}</li>
+                        <li><strong>Contacto:</strong> ${data.buyerContactNumber}</li>
                         <li><strong>Color único:</strong> <span style="background: ${uniqueColor}; color: white; padding: 2px 8px; border-radius: 3px;">${uniqueColor}</span></li>
                     </ul>
                 </div>
@@ -853,6 +856,7 @@ export class EmailService {
       const mockPaymentData: PaymentEmailData = {
         buyerEmail: userEmail,
         buyerName: userName,
+        buyerContactNumber: '+57 300 123 4567', // Número de contacto de prueba
         wallpaperNumbers: [1, 5, 9], // Números de prueba
         amount: 15000, // $15.000 COP de prueba
         currency: 'COP',

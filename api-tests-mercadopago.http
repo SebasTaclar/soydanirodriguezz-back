@@ -7,10 +7,12 @@ POST http://localhost:7071/api/v1/payment/create
 Content-Type: application/json
 
 {
-  "wallpaperNumber": 42,
+  "wallpaperNumbers": [42, 43, 44],
   "buyerEmail": "cliente@ejemplo.com",
   "buyerName": "Juan Pérez",
-  "buyerIdentificationNumber": "12345678"
+  "buyerIdentificationNumber": "12345678",
+  "buyerContactNumber": "+57 300 123 4567",
+  "amount": 45000
 }
 
 ### 2. Consultar compras por email
@@ -57,10 +59,12 @@ POST http://localhost:7071/api/v1/payment/create
 Content-Type: application/json
 
 {
-  "wallpaperNumber": 42,
+  "wallpaperNumbers": [42],
   "buyerEmail": "email-invalido",
   "buyerName": "Juan Pérez",
-  "buyerIdentificationNumber": "12345678"
+  "buyerIdentificationNumber": "12345678",
+  "buyerContactNumber": "+57 300 123 4567",
+  "amount": 15000
 }
 
 ### 6. Crear pago con wallpaper number inválido
@@ -68,10 +72,12 @@ POST http://localhost:7071/api/v1/payment/create
 Content-Type: application/json
 
 {
-  "wallpaperNumber": -5,
+  "wallpaperNumbers": [-5],
   "buyerEmail": "cliente@ejemplo.com",
   "buyerName": "Juan Pérez",
-  "buyerIdentificationNumber": "12345678"
+  "buyerIdentificationNumber": "12345678",
+  "buyerContactNumber": "+57 300 123 4567",
+  "amount": 15000
 }
 
 ### 7. Crear pago con campos faltantes
@@ -79,7 +85,7 @@ POST http://localhost:7071/api/v1/payment/create
 Content-Type: application/json
 
 {
-  "wallpaperNumber": 42,
+  "wallpaperNumbers": [42],
   "buyerEmail": "cliente@ejemplo.com"
 }
 
@@ -98,10 +104,12 @@ GET http://localhost:7071/api/v1/purchases
 # Content-Type: application/json
 # 
 # {
-#   "wallpaperNumber": 42,
+#   "wallpaperNumbers": [42],
 #   "buyerEmail": "cliente@ejemplo.com",
 #   "buyerName": "Juan Pérez",
-#   "buyerIdentificationNumber": "12345678"
+#   "buyerIdentificationNumber": "12345678",
+#   "buyerContactNumber": "+57 300 123 4567",
+#   "amount": 15000
 # }
 
 ### 11. Consultar compras (PRODUCTION)

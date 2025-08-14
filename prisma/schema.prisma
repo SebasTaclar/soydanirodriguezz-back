@@ -27,6 +27,7 @@ model Purchase {
   buyerEmail                String   @map("buyer_email")
   buyerName                 String   @map("buyer_name")
   buyerIdentificationNumber String   @map("buyer_identification_number")
+  buyerContactNumber        String   @map("buyer_contact_number") // Contact/phone number
   mercadopagoPaymentId      String?  @map("mercadopago_payment_id")
   preferenceId              String   @map("preference_id")
   externalReference         String   @map("external_reference")
