@@ -79,6 +79,9 @@ export class PurchaseService {
         throw new Error('Amount must be greater than 0');
       }
 
+      // Validar disponibilidad de wallpapers usando la lógica existente
+      await this.validateWallpaperAvailability(request.wallpaperNumbers);
+
       // Crear el pago en Mercado Pago
       const paymentData: CreatePaymentData = {
         wallpaperNumbers: request.wallpaperNumbers,
@@ -313,6 +316,53 @@ export class PurchaseService {
       };
     } catch (error) {
       Logger.error('Error getting wallpaper status', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Valida que los wallpapers solicitados estén disponibles
+   * Reutiliza la lógica de getWallpaperStatus() para verificar disponibilidad
+   */
+  private async validateWallpaperAvailability(requestedWallpapers: number[]): Promise<void> {
+    try {
+      Logger.info('Validating wallpaper availability', { requestedWallpapers });
+
+      // Reutilizar la lógica existente para obtener wallpapers ocupados
+      const wallpaperStatus = await this.getWallpaperStatus();
+
+      // Combinar wallpapers aprobados y pendientes (ambos no disponibles)
+      const unavailableWallpapers = new Set([
+        ...wallpaperStatus.approved,
+        ...wallpaperStatus.pending,
+      ]);
+
+      // Verificar qué wallpapers solicitados no están disponibles
+      const conflictingWallpapers = requestedWallpapers.filter((num) =>
+        unavailableWallpapers.has(num)
+      );
+
+      if (conflictingWallpapers.length > 0) {
+        const errorMessage =
+          conflictingWallpapers.length === 1
+            ? `Wallpaper #${conflictingWallpapers[0]} no está disponible`
+            : `Wallpapers no disponibles: ${conflictingWallpapers.map((n) => `#${n}`).join(', ')}`;
+
+        Logger.warn('Wallpaper availability validation failed', {
+          requestedWallpapers,
+          conflictingWallpapers,
+          unavailableCount: unavailableWallpapers.size,
+        });
+
+        throw new Error(errorMessage);
+      }
+
+      Logger.info('Wallpaper availability validation passed', {
+        requestedWallpapers,
+        availableForPurchase: true,
+      });
+    } catch (error) {
+      Logger.error('Error validating wallpaper availability', error);
       throw error;
     }
   }

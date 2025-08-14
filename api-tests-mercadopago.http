@@ -89,17 +89,30 @@ Content-Type: application/json
   "buyerEmail": "cliente@ejemplo.com"
 }
 
-### 8. Consultar compras con email inválido
+### 8. Crear pago con wallpapers no disponibles (ya comprados)
+POST http://localhost:7071/api/v1/payment/create
+Content-Type: application/json
+
+{
+  "wallpaperNumbers": [1, 2, 3],
+  "buyerEmail": "test@ejemplo.com",
+  "buyerName": "Usuario Test",
+  "buyerIdentificationNumber": "87654321",
+  "buyerContactNumber": "+57 300 987 6543",
+  "amount": 45000
+}
+
+### 9. Consultar compras con email inválido
 GET http://localhost:7071/api/v1/purchases?email=email-malo
 
-### 9. Consultar compras sin email
+### 10. Consultar compras sin email
 GET http://localhost:7071/api/v1/purchases
 
 ### ==============================================
 ### TESTS FOR PRODUCTION ENVIRONMENT
 ### ==============================================
 
-### 10. Crear pago (PRODUCTION)
+### 11. Crear pago (PRODUCTION)
 # POST https://soydanirodriguezz-back-c3a4gvcqbrg8fcew.centralus-01.azurewebsites.net/api/v1/payment/create
 # Content-Type: application/json
 # 
@@ -112,5 +125,5 @@ GET http://localhost:7071/api/v1/purchases
 #   "amount": 15000
 # }
 
-### 11. Consultar compras (PRODUCTION)
+### 12. Consultar compras (PRODUCTION)
 # GET https://soydanirodriguezz-back-c3a4gvcqbrg8fcew.centralus-01.azurewebsites.net/api/v1/purchases?email=cliente@ejemplo.com
