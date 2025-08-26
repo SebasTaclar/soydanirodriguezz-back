@@ -31,9 +31,12 @@ model Purchase {
   mercadopagoPaymentId      String?  @map("mercadopago_payment_id")
   preferenceId              String   @map("preference_id")
   externalReference         String   @map("external_reference")
-  status                    String   @default("PENDING") // PENDING, APPROVED, CANCELLED, REJECTED
+  status                    String   @default("PENDING") // PENDING, APPROVED, CANCELLED, REJECTED, COMPLETED, FAILED
   amount                    Int      @default(15000) // Amount in COP (Colombian Pesos)
   currency                  String   @default("COP")
+  // Campos para soportar múltiples proveedores de pago
+  paymentProvider           String?  @map("payment_provider") // MERCADOPAGO, WOMPI, etc.
+  wompiTransactionId        String?  @map("wompi_transaction_id") // ID de transacción de Wompi
   createdAt                 DateTime @default(now()) @map("created_at")
   updatedAt                 DateTime @updatedAt @map("updated_at")
 

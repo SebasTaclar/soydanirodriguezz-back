@@ -1,0 +1,78 @@
+### Wompi Payment Tests
+
+### 1. Create Wompi Payment
+POST {{baseUrl}}/api/v1/wompi/payments
+Content-Type: application/json
+
+{
+  "wallpaperNumbers": [1, 5, 10],
+  "buyerEmail": "test@example.com",
+  "buyerName": "Juan Pérez",
+  "buyerIdentificationNumber": "12345678",
+  "buyerContactNumber": "3001234567",
+  "amount": 45000
+}
+
+### 2. Create Single Wallpaper Payment
+POST {{baseUrl}}/api/v1/wompi/payments
+Content-Type: application/json
+
+{
+  "wallpaperNumbers": [7],
+  "buyerEmail": "maria@test.com",
+  "buyerName": "María González",
+  "buyerIdentificationNumber": "87654321",
+  "buyerContactNumber": "3109876543",
+  "amount": 15000
+}
+
+### 3. Test Minimum Amount (should work)
+POST {{baseUrl}}/api/v1/wompi/payments
+Content-Type: application/json
+
+{
+  "wallpaperNumbers": [1],
+  "buyerEmail": "min@test.com",
+  "buyerName": "Test Min",
+  "buyerIdentificationNumber": "123456",
+  "buyerContactNumber": "3001111111",
+  "amount": 1000
+}
+
+### 4. Test Invalid Amount (should fail)
+POST {{baseUrl}}/api/v1/wompi/payments
+Content-Type: application/json
+
+{
+  "wallpaperNumbers": [1],
+  "buyerEmail": "invalid@test.com",
+  "buyerName": "Test Invalid",
+  "buyerIdentificationNumber": "123456",
+  "buyerContactNumber": "3001111111",
+  "amount": 500
+}
+
+### 5. Test Missing Fields (should fail)
+POST {{baseUrl}}/api/v1/wompi/payments
+Content-Type: application/json
+
+{
+  "wallpaperNumbers": [1],
+  "buyerEmail": "missing@test.com"
+}
+
+### 6. Test Invalid Email (should fail)
+POST {{baseUrl}}/api/v1/wompi/payments
+Content-Type: application/json
+
+{
+  "wallpaperNumbers": [1],
+  "buyerEmail": "invalid-email",
+  "buyerName": "Test Email",
+  "buyerIdentificationNumber": "123456",
+  "buyerContactNumber": "3001111111",
+  "amount": 15000
+}
+
+### Variables
+@baseUrl = http://localhost:7071
