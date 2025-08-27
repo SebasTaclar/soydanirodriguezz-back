@@ -114,6 +114,7 @@ const funcCreateWompiPayment = async (
         },
         payment: {
           reference: result.reference,
+          checkoutUrl: result.checkoutUrl, // URL del Web Checkout
           publicKey: result.publicKey,
           signature: result.signature,
           amountInCents: result.amountInCents,

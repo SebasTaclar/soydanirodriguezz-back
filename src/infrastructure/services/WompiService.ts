@@ -29,7 +29,7 @@ export class WompiService implements IWompiProvider {
 
   async createPayment(data: WompiPaymentData): Promise<WompiPaymentResult> {
     try {
-      Logger.info('Generating Wompi payment parameters', {
+      Logger.info('Generating Wompi Web Checkout URL', {
         wallpaperNumbers: data.wallpaperNumbers,
         buyerEmail: data.buyerEmail,
         amount: data.amount,
@@ -47,15 +47,33 @@ export class WompiService implements IWompiProvider {
       const concatenated = `${reference}${amountInCents}COP${this.integritySecret}`;
       const signature = crypto.createHash('sha256').update(concatenated).digest('hex');
 
-      Logger.info('Wompi payment parameters generated successfully', {
+      // Construir URL del Web Checkout
+      const redirectUrl =
+        process.env.WOMPI_REDIRECT_URL || 'https://zealous-beach-0447ece0f.2.azurestaticapps.net/';
+
+      const params = new URLSearchParams({
+        'public-key': this.publicKey,
+        currency: 'COP',
+        'amount-in-cents': amountInCents.toString(),
+        reference: reference,
+        'signature:integrity': signature,
+        'redirect-url': redirectUrl,
+        'customer-data:email': data.buyerEmail,
+        'customer-data:full-name': data.buyerName,
+        'customer-data:phone-number': data.buyerContactNumber,
+      });
+
+      const checkoutUrl = `https://checkout.wompi.co/p/?${params.toString()}`;
+
+      Logger.info('Wompi Web Checkout URL generated successfully', {
         reference,
         amountInCents,
-        signatureGenerated: !!signature,
+        checkoutUrlGenerated: !!checkoutUrl,
       });
 
       return {
         transactionId: reference, // Usamos la referencia como ID temporal
-        paymentUrl: '', // No necesario para Widget/Checkout Web
+        paymentUrl: checkoutUrl, // Ahora sí retornamos la URL del checkout
         reference: reference,
         status: 'PENDING',
         publicKey: this.publicKey,
@@ -64,13 +82,13 @@ export class WompiService implements IWompiProvider {
         currency: 'COP',
       };
     } catch (error: any) {
-      Logger.error('Error generating Wompi payment parameters', {
+      Logger.error('Error generating Wompi Web Checkout URL', {
         error: error.message,
         wallpaperNumbers: data.wallpaperNumbers,
         buyerEmail: data.buyerEmail,
       });
 
-      throw new Error(`Failed to generate Wompi payment parameters: ${error.message}`);
+      throw new Error(`Failed to generate Wompi Web Checkout URL: ${error.message}`);
     }
   }
 

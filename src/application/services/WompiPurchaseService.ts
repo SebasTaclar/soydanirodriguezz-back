@@ -19,7 +19,7 @@ export interface CreateWompiPurchaseResponse {
   amountInCents: number;
   wallpaperNumbers: number[];
   currency: string;
-  redirectUrl?: string;
+  checkoutUrl: string; // URL del Web Checkout
 }
 
 export class WompiPurchaseService {
@@ -84,6 +84,7 @@ export class WompiPurchaseService {
         amountInCents: wompiPayment.amountInCents,
         wallpaperNumbers: request.wallpaperNumbers,
         currency: wompiPayment.currency,
+        checkoutUrl: wompiPayment.paymentUrl, // URL del Web Checkout
       };
     } catch (error: any) {
       Logger.error('Error creating Wompi purchase', {
