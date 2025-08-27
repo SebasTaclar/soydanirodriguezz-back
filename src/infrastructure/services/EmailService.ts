@@ -277,7 +277,7 @@ export class EmailService {
     // Mostrar sección de wallpaper según el estado del pago
     let wallpaperSection = '';
 
-    if (data.status.toUpperCase() === 'APPROVED') {
+    if (data.status.toUpperCase() === 'APPROVED' || data.status.toUpperCase() === 'COMPLETED') {
       wallpaperSection = `
                 <div class="moto-preview">
                     <div class="preview-title">🎨 Wallpaper personalizado adjunto</div>

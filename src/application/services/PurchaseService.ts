@@ -242,6 +242,7 @@ export class PurchaseService {
         wallpaperNumbers: JSON.parse(purchase.wallpaperNumbers), // Parsear JSON a array
         buyerEmail: purchase.buyerEmail,
         buyerName: purchase.buyerName,
+        buyerContactNumber: purchase.buyerContactNumber,
         status: purchase.status,
         amount: purchase.amount,
         currency: purchase.currency,
