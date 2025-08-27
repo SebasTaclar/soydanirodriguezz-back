@@ -108,6 +108,60 @@ export class WompiService implements IWompiProvider {
     }
   }
 
+  // Método para consultar el estado de una transacción
+  async getTransactionStatus(transactionId: string): Promise<{ status: string; data: any }> {
+    try {
+      Logger.info('Querying Wompi transaction status', { transactionId });
+
+      const baseUrl = this.isProduction
+        ? 'https://production.wompi.co/v1'
+        : 'https://sandbox.wompi.co/v1';
+
+      const url = `${baseUrl}/transactions/${transactionId}`;
+
+      Logger.info('Making request to Wompi API', { url });
+
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+          Authorization: `Bearer ${this.publicKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      const responseData = await response.json();
+
+      Logger.info('Wompi API response received', {
+        transactionId,
+        status: response.status,
+        statusText: response.statusText,
+        responseData: JSON.stringify(responseData, null, 2),
+      });
+
+      if (!response.ok) {
+        Logger.error('Wompi API error response', {
+          transactionId,
+          status: response.status,
+          statusText: response.statusText,
+          responseData,
+        });
+        throw new Error(`Wompi API error: ${response.status} - ${JSON.stringify(responseData)}`);
+      }
+
+      return {
+        status: responseData.data?.status || 'UNKNOWN',
+        data: responseData,
+      };
+    } catch (error: any) {
+      Logger.error('Error querying Wompi transaction status', {
+        transactionId,
+        error: error.message,
+        stack: error.stack,
+      });
+      throw error;
+    }
+  }
+
   // Método auxiliar para generar firma con fecha de expiración (opcional)
   generateSignatureWithExpiration(
     reference: string,
