@@ -5,6 +5,7 @@ import { ApiResponseBuilder } from '../src/shared/ApiResponse';
 import { WompiPurchaseService } from '../src/application/services/WompiPurchaseService';
 import { WompiService } from '../src/infrastructure/services/WompiService';
 import { getPrismaClient } from '../src/config/PrismaClient';
+import { getEmailService } from '../src/shared/serviceProvider';
 
 const funcWebhookWompi = async (
   _context: Context,
@@ -120,6 +121,24 @@ async function handleTransactionUpdated(data: any, log: Logger): Promise<void> {
 
     // También actualizar el wompiTransactionId si no lo tenemos
     await updateWompiTransactionId(transaction.reference, transaction.id, log);
+
+    // Enviar email de confirmación para pagos completados o rechazados
+    try {
+      await sendWompiPaymentNotificationEmail(
+        transaction.reference,
+        transaction.id,
+        mappedStatus,
+        transaction,
+        log
+      );
+    } catch (emailError: any) {
+      log.logError('Error sending Wompi payment notification email', {
+        error: emailError.message,
+        transactionId: transaction.id,
+        reference: transaction.reference,
+      });
+      // No fallar el webhook por un error de email
+    }
 
     log.logInfo('Transaction status updated successfully', {
       transactionId: transaction.id,
@@ -271,6 +290,67 @@ async function updateWompiTransactionId(
       error: error.message,
     });
     // No lanzar error para no afectar el procesamiento principal
+  }
+}
+
+// Función para enviar email de notificación de pago de Wompi
+async function sendWompiPaymentNotificationEmail(
+  reference: string,
+  transactionId: string,
+  status: string,
+  transaction: any,
+  log: Logger
+): Promise<void> {
+  try {
+    const prismaClient = getPrismaClient();
+
+    // Buscar la compra por referencia para obtener los datos del comprador
+    const purchase = await prismaClient.purchase.findFirst({
+      where: {
+        externalReference: reference,
+        paymentProvider: 'WOMPI',
+      },
+    });
+
+    if (!purchase) {
+      log.logWarning('Purchase not found for email notification', {
+        reference,
+        transactionId,
+      });
+      return;
+    }
+
+    // Preparar datos para el email similar al formato de MercadoPago
+    const paymentWebhookData = {
+      id: transactionId,
+      status: transaction.status, // Estado original de Wompi
+      externalReference: reference,
+      transactionAmount: purchase.amount,
+      paymentMethodId: 'wompi_checkout',
+      dateApproved: status === 'COMPLETED' ? new Date().toISOString() : null,
+      dateCreated: purchase.createdAt.toISOString(),
+      // Datos adicionales de Wompi
+      wompiStatus: transaction.status,
+      wompiStatusMessage: transaction.status_message,
+    };
+
+    const emailService = getEmailService(log);
+    await emailService.sendPaymentNotificationFromWebhook(paymentWebhookData, status);
+
+    log.logInfo('Wompi payment notification email sent successfully', {
+      reference,
+      transactionId,
+      status,
+      buyerEmail: purchase.buyerEmail,
+    });
+  } catch (error: any) {
+    log.logError('Error sending Wompi payment notification email', {
+      error: error.message,
+      reference,
+      transactionId,
+      status,
+    });
+    throw error;
   }
 }
 

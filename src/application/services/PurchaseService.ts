@@ -264,11 +264,11 @@ export class PurchaseService {
     try {
       Logger.info('Getting wallpaper status');
 
-      // Obtener todas las compras con estado APPROVED o PENDING
+      // Obtener todas las compras con estado APPROVED, COMPLETED o PENDING
       const purchases = await this.prisma.purchase.findMany({
         where: {
           status: {
-            in: ['APPROVED', 'PENDING'],
+            in: ['APPROVED', 'COMPLETED', 'PENDING'],
           },
         },
         select: {
@@ -284,7 +284,8 @@ export class PurchaseService {
       for (const purchase of purchases) {
         const wallpaperNumbers = JSON.parse(purchase.wallpaperNumbers) as number[];
 
-        if (purchase.status === 'APPROVED') {
+        // APPROVED y COMPLETED se consideran como aprobados (no disponibles)
+        if (purchase.status === 'APPROVED' || purchase.status === 'COMPLETED') {
           wallpaperNumbers.forEach((num) => approvedWallpapers.add(num));
         } else if (purchase.status === 'PENDING') {
           wallpaperNumbers.forEach((num) => pendingWallpapers.add(num));
