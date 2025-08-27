@@ -91,7 +91,7 @@ async function handleTransactionUpdated(data: any, log: Logger): Promise<void> {
   try {
     const transaction = data.transaction;
 
-    if (!transaction || !transaction.id) {
+    if (!transaction || !transaction.id || !transaction.reference) {
       log.logWarning('Transaction data missing in webhook', { data });
       return;
     }
@@ -100,22 +100,38 @@ async function handleTransactionUpdated(data: any, log: Logger): Promise<void> {
       transactionId: transaction.id,
       status: transaction.status,
       reference: transaction.reference,
+      statusMessage: transaction.status_message,
     });
 
-    // Actualizar el estado de la compra
+    // Mapear el estado de Wompi a nuestro sistema
+    const mappedStatus = mapWompiStatusToInternal(transaction.status);
+
+    log.logInfo('Wompi status mapped', {
+      originalStatus: transaction.status,
+      mappedStatus: mappedStatus,
+      reference: transaction.reference,
+    });
+
+    // Actualizar el estado de la compra usando la referencia
     const prismaClient = getPrismaClient();
     const wompiPurchaseService = new WompiPurchaseService(prismaClient);
 
-    await wompiPurchaseService.updatePurchaseStatus(transaction.id);
+    await wompiPurchaseService.updatePurchaseStatusByReference(transaction.reference, mappedStatus);
+
+    // También actualizar el wompiTransactionId si no lo tenemos
+    await updateWompiTransactionId(transaction.reference, transaction.id, log);
 
     log.logInfo('Transaction status updated successfully', {
       transactionId: transaction.id,
-      newStatus: transaction.status,
+      reference: transaction.reference,
+      oldStatus: 'PENDING',
+      newStatus: mappedStatus,
     });
   } catch (error: any) {
     log.logError('Error handling transaction update', {
       error: error.message,
       transactionId: data.transaction?.id,
+      reference: data.transaction?.reference,
     });
     throw error;
   }
@@ -187,6 +203,62 @@ async function handlePaymentLinkExpired(data: any, log: Logger): Promise<void> {
       paymentLinkId: data.payment_link?.id,
     });
     throw error;
+  }
+}
+
+// Función para mapear estados de Wompi a nuestro sistema interno
+function mapWompiStatusToInternal(wompiStatus: string): string {
+  switch (wompiStatus.toUpperCase()) {
+    case 'APPROVED':
+      return 'COMPLETED';
+    case 'DECLINED':
+    case 'ERROR':
+      return 'REJECTED';
+    case 'VOIDED':
+      return 'CANCELLED';
+    case 'PENDING':
+    default:
+      return 'PENDING';
+  }
+}
+
+// Función para actualizar el wompiTransactionId si no lo tenemos
+async function updateWompiTransactionId(
+  reference: string,
+  transactionId: string,
+  log: Logger
+): Promise<void> {
+  try {
+    const prismaClient = getPrismaClient();
+
+    // Buscar la compra por referencia
+    const purchase = await prismaClient.purchase.findFirst({
+      where: {
+        externalReference: reference,
+        paymentProvider: 'WOMPI',
+      },
+    });
+
+    // Si existe y no tiene wompiTransactionId, actualizarlo
+    if (purchase && !purchase.wompiTransactionId) {
+      await prismaClient.purchase.update({
+        where: { id: purchase.id },
+        data: { wompiTransactionId: transactionId },
+      });
+
+      log.logInfo('Wompi transaction ID updated', {
+        purchaseId: purchase.id,
+        reference: reference,
+        wompiTransactionId: transactionId,
+      });
+    }
+  } catch (error: any) {
+    log.logError('Error updating Wompi transaction ID', {
+      reference,
+      transactionId,
+      error: error.message,
+    });
+    // No lanzar error para no afectar el procesamiento principal
   }
 }
 
