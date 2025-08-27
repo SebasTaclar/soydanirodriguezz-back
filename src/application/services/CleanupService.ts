@@ -162,8 +162,6 @@ export class CleanupService {
 
       // Definir timeouts para Wompi
       const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000); // 30 minutos
-      const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000); // 6 horas para pagos en efectivo
-      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 horas timeout final
 
       // Caso 1: Pago abandonado (sin transacción después de 30 minutos)
       if (!purchase.wompiTransactionId && purchase.createdAt < thirtyMinutesAgo) {
@@ -214,15 +212,15 @@ export class CleanupService {
             });
 
             // Si no se puede consultar Wompi, aplicar política de timeout
-            if (purchase.createdAt < twentyFourHoursAgo) {
+            const hoursElapsed = (Date.now() - purchase.createdAt.getTime()) / (1000 * 60 * 60);
+
+            if (hoursElapsed >= 24) {
               this.logger.logInfo(
                 'Wompi purchase timeout - 24 hours elapsed without confirmation',
                 {
                   purchaseId: purchase.id,
                   createdAt: purchase.createdAt,
-                  hoursElapsed: Math.floor(
-                    (Date.now() - purchase.createdAt.getTime()) / (1000 * 60 * 60)
-                  ),
+                  hoursElapsed: Math.floor(hoursElapsed),
                 }
               );
 
@@ -233,9 +231,8 @@ export class CleanupService {
                 'Wompi API failed but within timeout window, keeping as pending',
                 {
                   purchaseId: purchase.id,
-                  hoursRemaining: Math.ceil(
-                    (twentyFourHoursAgo.getTime() - purchase.createdAt.getTime()) / (1000 * 60 * 60)
-                  ),
+                  hoursElapsed: Math.floor(hoursElapsed * 100) / 100, // 2 decimales
+                  hoursRemaining: Math.ceil(24 - hoursElapsed),
                 }
               );
             }
@@ -247,13 +244,14 @@ export class CleanupService {
             wompiTransactionId: purchase.wompiTransactionId,
           });
 
-          if (purchase.createdAt < sixHoursAgo) {
+          // Calcular horas transcurridas desde la creación
+          const hoursElapsed = (Date.now() - purchase.createdAt.getTime()) / (1000 * 60 * 60);
+
+          if (hoursElapsed >= 6) {
             this.logger.logInfo('Wompi reference timeout - 6 hours without real transaction ID', {
               purchaseId: purchase.id,
               createdAt: purchase.createdAt,
-              hoursElapsed: Math.floor(
-                (Date.now() - purchase.createdAt.getTime()) / (1000 * 60 * 60)
-              ),
+              hoursElapsed: Math.floor(hoursElapsed),
             });
 
             shouldUpdate = true;
@@ -261,9 +259,8 @@ export class CleanupService {
           } else {
             this.logger.logInfo('Wompi reference within timeout window, keeping as pending', {
               purchaseId: purchase.id,
-              hoursRemaining: Math.ceil(
-                (sixHoursAgo.getTime() - purchase.createdAt.getTime()) / (1000 * 60 * 60)
-              ),
+              hoursElapsed: Math.floor(hoursElapsed * 100) / 100, // 2 decimales
+              hoursRemaining: Math.ceil(6 - hoursElapsed),
             });
           }
         }
@@ -454,12 +451,13 @@ export class CleanupService {
     }
   }
 
-  // Mapeo de estados de Wompi (para uso futuro)
+  // Mapeo de estados de Wompi
   private mapWompiStatus(wompiStatus: string): string {
-    switch (wompiStatus) {
+    switch (wompiStatus.toUpperCase()) {
       case 'APPROVED':
         return 'COMPLETED';
       case 'DECLINED':
+      case 'ERROR':
         return 'REJECTED';
       case 'VOIDED':
         return 'CANCELLED';
