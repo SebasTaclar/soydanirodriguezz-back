@@ -124,14 +124,19 @@ export class EmailService {
         wallpaperNumbers: paymentData.wallpaperNumbers,
       });
 
-      // Solo generar wallpaper si el pago está aprobado
+      // Solo generar wallpaper si el pago está aprobado o completado
       let attachments: EmailAttachment[] = [];
       let uniqueColor = '#667eea'; // Color por defecto
       let attachmentName = '';
 
-      if (paymentData.status.toUpperCase() === 'APPROVED') {
-        this.logger.logInfo('Payment approved - generating wallpaper attachment', {
+      const isSuccessfulPayment = ['APPROVED', 'COMPLETED'].includes(
+        paymentData.status.toUpperCase()
+      );
+
+      if (isSuccessfulPayment) {
+        this.logger.logInfo('Payment approved/completed - generating wallpaper attachment', {
           buyerEmail: paymentData.buyerEmail,
+          status: paymentData.status,
         });
 
         // Generar attachment de wallpaper personalizado con color único
@@ -143,10 +148,13 @@ export class EmailService {
         attachments = [imageAttachment];
         attachmentName = imageAttachment.name;
       } else {
-        this.logger.logInfo('Payment not approved - sending notification without wallpaper', {
-          buyerEmail: paymentData.buyerEmail,
-          status: paymentData.status,
-        });
+        this.logger.logInfo(
+          'Payment not approved/completed - sending notification without wallpaper',
+          {
+            buyerEmail: paymentData.buyerEmail,
+            status: paymentData.status,
+          }
+        );
         uniqueColor = this.generateUniqueColor(paymentData.wallpaperNumbers);
       }
 
@@ -163,7 +171,7 @@ export class EmailService {
       this.logger.logInfo('Payment confirmation email sent successfully', {
         buyerEmail: paymentData.buyerEmail,
         status: paymentData.status,
-        hasWallpaper: paymentData.status.toUpperCase() === 'APPROVED',
+        hasWallpaper: isSuccessfulPayment,
       });
     } catch (error) {
       this.logger.logError('Error sending payment confirmation email', error);
