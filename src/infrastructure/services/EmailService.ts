@@ -240,6 +240,7 @@ export class EmailService {
   private getEmailSubject(status: string): string {
     switch (status.toUpperCase()) {
       case 'APPROVED':
+      case 'COMPLETED':
         return '🎉 ¡Tu pago ha sido aprobado! - Wallpapers Digitales';
       case 'REJECTED':
         return '❌ Problema con tu pago - Wallpapers Digitales';
@@ -421,6 +422,7 @@ export class EmailService {
   private getStatusIcon(status: string): string {
     switch (status.toUpperCase()) {
       case 'APPROVED':
+      case 'COMPLETED':
         return '🎉';
       case 'REJECTED':
         return '❌';
@@ -436,6 +438,7 @@ export class EmailService {
   private getStatusMessage(status: string): string {
     switch (status.toUpperCase()) {
       case 'APPROVED':
+      case 'COMPLETED':
         return 'Tu pago ha sido aprobado exitosamente';
       case 'REJECTED':
         return 'Tu pago no pudo ser procesado';
@@ -451,6 +454,7 @@ export class EmailService {
   private getStatusSpecificContent(status: string): string {
     switch (status.toUpperCase()) {
       case 'APPROVED':
+      case 'COMPLETED':
         return `
         <div style="background: #d4edda; color: #155724; padding: 15px; border-radius: 5px; margin: 15px 0;">
             <h4>🎉 ¡Felicitaciones!</h4>
