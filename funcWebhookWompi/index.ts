@@ -222,7 +222,7 @@ function mapWompiStatusToInternal(wompiStatus: string): string {
   }
 }
 
-// Función para actualizar el wompiTransactionId si no lo tenemos
+// Función para actualizar el wompiTransactionId con el ID real de la transacción
 async function updateWompiTransactionId(
   reference: string,
   transactionId: string,
@@ -239,17 +239,29 @@ async function updateWompiTransactionId(
       },
     });
 
-    // Si existe y no tiene wompiTransactionId, actualizarlo
-    if (purchase && !purchase.wompiTransactionId) {
+    if (purchase) {
+      log.logInfo('Updating wompiTransactionId with real transaction ID', {
+        purchaseId: purchase.id,
+        reference: reference,
+        oldWompiTransactionId: purchase.wompiTransactionId,
+        newWompiTransactionId: transactionId,
+      });
+
+      // Siempre actualizar con el ID real de la transacción
       await prismaClient.purchase.update({
         where: { id: purchase.id },
         data: { wompiTransactionId: transactionId },
       });
 
-      log.logInfo('Wompi transaction ID updated', {
+      log.logInfo('Wompi transaction ID updated successfully', {
         purchaseId: purchase.id,
         reference: reference,
         wompiTransactionId: transactionId,
+      });
+    } else {
+      log.logWarning('Purchase not found for reference', {
+        reference,
+        transactionId,
       });
     }
   } catch (error: any) {

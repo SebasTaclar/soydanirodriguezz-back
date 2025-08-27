@@ -154,6 +154,7 @@ export class CleanupService {
       this.logger.logInfo('Processing Wompi purchase', {
         purchaseId: purchase.id,
         wompiTransactionId: purchase.wompiTransactionId,
+        minutesElapsed: Math.floor((Date.now() - purchase.createdAt.getTime()) / (1000 * 60)),
       });
 
       let shouldUpdate = false;
@@ -161,7 +162,8 @@ export class CleanupService {
 
       // Definir timeouts para Wompi
       const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000); // 30 minutos
-      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000); // 5 minutos para testing
+      const sixHoursAgo = new Date(Date.now() - 6 * 60 * 60 * 1000); // 6 horas para pagos en efectivo
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 horas timeout final
 
       // Caso 1: Pago abandonado (sin transacción después de 30 minutos)
       if (!purchase.wompiTransactionId && purchase.createdAt < thirtyMinutesAgo) {
@@ -173,46 +175,97 @@ export class CleanupService {
         shouldUpdate = true;
         newStatus = 'CANCELLED';
       }
-      // Caso 2: Tiene transacción pero pendiente por más de 5 minutos (para testing)
-      else if (purchase.wompiTransactionId && purchase.createdAt < fiveMinutesAgo) {
-        this.logger.logInfo('Wompi purchase pending too long - checking API status', {
-          purchaseId: purchase.id,
-          wompiTransactionId: purchase.wompiTransactionId,
-          createdAt: purchase.createdAt,
-          minutesElapsed: Math.floor((Date.now() - purchase.createdAt.getTime()) / (1000 * 60)),
-        });
+      // Caso 2: Tiene transacción - siempre verificar en Wompi primero
+      else if (purchase.wompiTransactionId) {
+        const isRealTransactionId = this.isRealWompiTransactionId(purchase.wompiTransactionId);
 
-        try {
-          // Consultar el estado real desde la API de Wompi
-          const wompiResponse = await this.wompiService.getTransactionStatus(
-            purchase.wompiTransactionId
-          );
-
-          this.logger.logInfo('Wompi API response received', {
+        if (isRealTransactionId) {
+          // Si tiene ID real, siempre consultar Wompi primero
+          this.logger.logInfo('Checking Wompi API for real transaction status', {
             purchaseId: purchase.id,
             wompiTransactionId: purchase.wompiTransactionId,
-            wompiStatus: wompiResponse.status,
-            responseData: JSON.stringify(wompiResponse.data, null, 2),
           });
 
-          newStatus = this.mapWompiStatus(wompiResponse.status);
-          shouldUpdate = true;
+          try {
+            const wompiResponse = await this.wompiService.getTransactionStatus(
+              purchase.wompiTransactionId
+            );
 
-          this.logger.logInfo('Wompi status mapped', {
-            purchaseId: purchase.id,
-            wompiStatus: wompiResponse.status,
-            mappedStatus: newStatus,
-          });
-        } catch (error) {
-          this.logger.logError('Error querying Wompi API, marking as cancelled after 24h', {
+            this.logger.logInfo('Wompi API response received', {
+              purchaseId: purchase.id,
+              wompiTransactionId: purchase.wompiTransactionId,
+              wompiStatus: wompiResponse.status,
+              responseData: JSON.stringify(wompiResponse.data, null, 2),
+            });
+
+            newStatus = this.mapWompiStatus(wompiResponse.status);
+            shouldUpdate = true;
+
+            this.logger.logInfo('Wompi status mapped', {
+              purchaseId: purchase.id,
+              wompiStatus: wompiResponse.status,
+              mappedStatus: newStatus,
+            });
+          } catch (error) {
+            this.logger.logWarning('Could not get status from Wompi API, checking timeout policy', {
+              purchaseId: purchase.id,
+              wompiTransactionId: purchase.wompiTransactionId,
+              error: error instanceof Error ? error.message : 'Unknown error',
+            });
+
+            // Si no se puede consultar Wompi, aplicar política de timeout
+            if (purchase.createdAt < twentyFourHoursAgo) {
+              this.logger.logInfo(
+                'Wompi purchase timeout - 24 hours elapsed without confirmation',
+                {
+                  purchaseId: purchase.id,
+                  createdAt: purchase.createdAt,
+                  hoursElapsed: Math.floor(
+                    (Date.now() - purchase.createdAt.getTime()) / (1000 * 60 * 60)
+                  ),
+                }
+              );
+
+              shouldUpdate = true;
+              newStatus = 'CANCELLED';
+            } else {
+              this.logger.logInfo(
+                'Wompi API failed but within timeout window, keeping as pending',
+                {
+                  purchaseId: purchase.id,
+                  hoursRemaining: Math.ceil(
+                    (twentyFourHoursAgo.getTime() - purchase.createdAt.getTime()) / (1000 * 60 * 60)
+                  ),
+                }
+              );
+            }
+          }
+        } else {
+          // Si solo tiene referencia, aplicar política de timeout por tiempo
+          this.logger.logInfo('Wompi transaction ID is a reference, checking timeout policy', {
             purchaseId: purchase.id,
             wompiTransactionId: purchase.wompiTransactionId,
-            error: error instanceof Error ? error.message : 'Unknown error',
           });
 
-          // Si falla la consulta a la API, marcar como cancelado después de 24 horas
-          shouldUpdate = true;
-          newStatus = 'CANCELLED';
+          if (purchase.createdAt < sixHoursAgo) {
+            this.logger.logInfo('Wompi reference timeout - 6 hours without real transaction ID', {
+              purchaseId: purchase.id,
+              createdAt: purchase.createdAt,
+              hoursElapsed: Math.floor(
+                (Date.now() - purchase.createdAt.getTime()) / (1000 * 60 * 60)
+              ),
+            });
+
+            shouldUpdate = true;
+            newStatus = 'CANCELLED';
+          } else {
+            this.logger.logInfo('Wompi reference within timeout window, keeping as pending', {
+              purchaseId: purchase.id,
+              hoursRemaining: Math.ceil(
+                (sixHoursAgo.getTime() - purchase.createdAt.getTime()) / (1000 * 60 * 60)
+              ),
+            });
+          }
         }
       }
 
@@ -414,6 +467,24 @@ export class CleanupService {
       default:
         return 'PENDING';
     }
+  }
+
+  // Verificar si un wompiTransactionId es un ID real de transacción o solo una referencia
+  private isRealWompiTransactionId(wompiTransactionId: string): boolean {
+    // Los IDs reales de Wompi tienen un formato como: "11779666-1756257523-64296"
+    // Las referencias tienen formato como: "wallpapers_18_1756257513564" o "test_rqU11B"
+
+    if (!wompiTransactionId) return false;
+
+    // Si empieza con "wallpapers_" o "test_", es una referencia
+    if (wompiTransactionId.startsWith('wallpapers_') || wompiTransactionId.startsWith('test_')) {
+      return false;
+    }
+
+    // Los IDs reales de Wompi suelen tener el formato de números separados por guiones
+    // Ejemplo: "11779666-1756257523-64296"
+    const realIdPattern = /^\d+-\d+-\d+$/;
+    return realIdPattern.test(wompiTransactionId);
   }
 
   async getCleanupStatistics(): Promise<{
