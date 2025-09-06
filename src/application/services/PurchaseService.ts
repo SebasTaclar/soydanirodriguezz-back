@@ -466,4 +466,121 @@ export class PurchaseService {
       throw error;
     }
   }
+
+  async generateBackupData(logger: any): Promise<{
+    statistics: {
+      totalPurchases: number;
+      approvedCount: number;
+      completedCount: number;
+      pendingCount: number;
+      cancelledCount: number;
+      rejectedCount: number;
+      failedCount: number;
+      totalRevenue: number;
+      uniqueWallpapersSold: number;
+    };
+    allPurchases: any[];
+    generatedAt: string;
+  }> {
+    try {
+      logger.logInfo('Generating backup data');
+
+      // Obtener todas las compras
+      const purchases = await this.prisma.purchase.findMany({
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+      // Calcular estadísticas
+      const statistics = {
+        totalPurchases: purchases.length,
+        approvedCount: 0,
+        completedCount: 0,
+        pendingCount: 0,
+        cancelledCount: 0,
+        rejectedCount: 0,
+        failedCount: 0,
+        totalRevenue: 0,
+        uniqueWallpapersSold: 0,
+      };
+
+      const soldWallpapers = new Set<number>();
+
+      // Procesar cada compra
+      for (const purchase of purchases) {
+        const status = purchase.status.toUpperCase();
+
+        // Contar por estado
+        switch (status) {
+          case 'APPROVED':
+            statistics.approvedCount++;
+            statistics.totalRevenue += purchase.amount;
+            // Agregar wallpapers vendidos
+            const wallpapers = JSON.parse(purchase.wallpaperNumbers) as number[];
+            wallpapers.forEach((num) => soldWallpapers.add(num));
+            break;
+          case 'COMPLETED':
+            statistics.completedCount++;
+            statistics.totalRevenue += purchase.amount;
+            // Agregar wallpapers vendidos
+            const completedWallpapers = JSON.parse(purchase.wallpaperNumbers) as number[];
+            completedWallpapers.forEach((num) => soldWallpapers.add(num));
+            break;
+          case 'PENDING':
+            statistics.pendingCount++;
+            break;
+          case 'CANCELLED':
+            statistics.cancelledCount++;
+            break;
+          case 'REJECTED':
+            statistics.rejectedCount++;
+            break;
+          case 'FAILED':
+            statistics.failedCount++;
+            break;
+        }
+      }
+
+      statistics.uniqueWallpapersSold = soldWallpapers.size;
+
+      // Formatear las compras para el backup
+      const formattedPurchases = purchases.map((purchase) => ({
+        id: purchase.id,
+        wallpaperNumbers: JSON.parse(purchase.wallpaperNumbers),
+        buyerEmail: purchase.buyerEmail,
+        buyerName: purchase.buyerName,
+        buyerIdentificationNumber: purchase.buyerIdentificationNumber,
+        buyerContactNumber: purchase.buyerContactNumber,
+        mercadopagoPaymentId: purchase.mercadopagoPaymentId,
+        wompiTransactionId: purchase.wompiTransactionId,
+        preferenceId: purchase.preferenceId,
+        externalReference: purchase.externalReference,
+        status: purchase.status,
+        amount: purchase.amount,
+        currency: purchase.currency,
+        paymentProvider: purchase.paymentProvider,
+        createdAt: purchase.createdAt,
+        updatedAt: purchase.updatedAt,
+      }));
+
+      const backupData = {
+        statistics,
+        allPurchases: formattedPurchases,
+        generatedAt: new Date().toISOString(),
+      };
+
+      logger.logInfo('Backup data generated successfully', {
+        totalPurchases: statistics.totalPurchases,
+        approvedCount: statistics.approvedCount,
+        completedCount: statistics.completedCount,
+        totalRevenue: statistics.totalRevenue,
+      });
+
+      return backupData;
+    } catch (error) {
+      logger.logError('Error generating backup data', error);
+      throw error;
+    }
+  }
 }

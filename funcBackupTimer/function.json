@@ -1,0 +1,11 @@
+{
+  "bindings": [
+    {
+      "name": "backupTimer",
+      "type": "timerTrigger",
+      "direction": "in",
+      "schedule": "%BACKUP_TIMER_SCHEDULE%"
+    }
+  ],
+  "scriptFile": "../dist/funcBackupTimer/index.js"
+}
