@@ -1,8 +1,11 @@
-import { Context } from '@azure/functions';
+import { AzureFunction, Context } from '@azure/functions';
 import { Logger } from '../src/shared/Logger';
 import { getPurchaseService, getEmailService } from '../src/shared/serviceProvider';
 
-const funcBackupTimer = async (context: Context): Promise<void> => {
+const funcBackupTimer: AzureFunction = async function (
+  context: Context,
+  backupTimer: unknown
+): Promise<void> {
   const log = new Logger(context);
 
   try {
@@ -71,6 +74,16 @@ const funcBackupTimer = async (context: Context): Promise<void> => {
       approvedCount: backupData.statistics.approvedCount,
       totalRevenue: backupData.statistics.totalRevenue,
     });
+
+    // Información del timer para debugging
+    if (
+      typeof backupTimer === 'object' &&
+      backupTimer !== null &&
+      'isPastDue' in backupTimer &&
+      (backupTimer as { isPastDue?: boolean }).isPastDue
+    ) {
+      log.logWarning('Timer function is running late!');
+    }
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     log.logError('Error in backup timer execution', { error: errorMessage });
