@@ -373,7 +373,7 @@ export class PurchaseService {
         message: 'Payment confirmation email resent successfully',
       };
     } catch (error) {
-      logger.logError('Error resending email for purchase', error);
+      logger.logError('Error resending email for purchase.', error);
       throw error;
     }
   }
