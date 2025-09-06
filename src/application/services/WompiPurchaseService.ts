@@ -151,8 +151,8 @@ export class WompiPurchaseService {
     }
 
     for (const wallpaperNumber of request.wallpaperNumbers) {
-      if (wallpaperNumber <= 0 || wallpaperNumber > 1000) {
-        throw new Error(`Wallpaper number ${wallpaperNumber} must be between 1 and 1000`);
+      if (wallpaperNumber <= 0 || wallpaperNumber > 5000) {
+        throw new Error(`Wallpaper number ${wallpaperNumber} must be between 1 and 5000`);
       }
     }
 

@@ -60,6 +60,36 @@ Content-Type: application/json
 
 {}
 
+### 10. Reenviar email de compra exitosa (usar ID de compra existente)
+POST http://localhost:7071/api/v1/purchase/resend-email
+Content-Type: application/json
+
+{
+  "purchaseId": "1"
+}
+
+### 11. Reenviar email con purchaseId inválido (debe fallar)
+POST http://localhost:7071/api/v1/purchase/resend-email
+Content-Type: application/json
+
+{
+  "purchaseId": "999999"
+}
+
+### 12. Reenviar email sin purchaseId (debe fallar)
+POST http://localhost:7071/api/v1/purchase/resend-email
+Content-Type: application/json
+
+{}
+
+### 13. Reenviar email con compra en estado PENDING (debe fallar con 400)
+POST http://localhost:7071/api/v1/purchase/resend-email
+Content-Type: application/json
+
+{
+  "purchaseId": "2"
+}
+
 ###
 # PROTECTED ENDPOINTS (Require JWT Authentication)
 # Use api-tests-with-auth.http for authenticated requests

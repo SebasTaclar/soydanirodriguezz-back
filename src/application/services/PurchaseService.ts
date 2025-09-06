@@ -48,8 +48,8 @@ export class PurchaseService {
 
       // Validar que los números de wallpaper sean válidos
       for (const wallpaperNumber of request.wallpaperNumbers) {
-        if (wallpaperNumber <= 0 || wallpaperNumber > 1000) {
-          throw new Error(`Wallpaper number ${wallpaperNumber} must be between 1 and 1000`);
+        if (wallpaperNumber <= 0 || wallpaperNumber > 5000) {
+          throw new Error(`Wallpaper number ${wallpaperNumber} must be between 1 and 5000`);
         }
       }
 
@@ -308,6 +308,72 @@ export class PurchaseService {
       };
     } catch (error) {
       Logger.error('Error getting wallpaper status', error);
+      throw error;
+    }
+  }
+
+  async resendEmailForPurchase(
+    purchaseId: string,
+    logger: Logger
+  ): Promise<{ success: boolean; message: string }> {
+    try {
+      logger.logInfo('Resending email for purchase', { purchaseId });
+
+      // Buscar la compra por ID
+      const purchase = await this.prisma.purchase.findUnique({
+        where: {
+          id: parseInt(purchaseId),
+        },
+      });
+
+      if (!purchase) {
+        throw new Error('Purchase not found');
+      }
+
+      // Verificar que el pago esté aprobado o completado
+      const isSuccessfulPayment = ['APPROVED', 'COMPLETED'].includes(purchase.status.toUpperCase());
+
+      if (!isSuccessfulPayment) {
+        logger.logInfo('Purchase not approved/completed - cannot resend email', {
+          purchaseId: purchase.id,
+          status: purchase.status,
+        });
+
+        throw new Error(
+          `Cannot resend email. Purchase status is: ${purchase.status}. Only APPROVED or COMPLETED purchases can have emails resent.`
+        );
+      }
+
+      // Preparar datos del email
+      const emailData = {
+        buyerEmail: purchase.buyerEmail,
+        buyerName: purchase.buyerName,
+        buyerContactNumber: purchase.buyerContactNumber || 'No proporcionado',
+        wallpaperNumbers: JSON.parse(purchase.wallpaperNumbers),
+        amount: purchase.amount,
+        currency: purchase.currency,
+        status: purchase.status,
+        paymentId: purchase.mercadopagoPaymentId || purchase.wompiTransactionId || 'N/A',
+        purchaseDate: purchase.updatedAt,
+      };
+
+      // Usar el EmailService siguiendo el patrón correcto del proyecto
+      const { getEmailService } = await import('../../shared/serviceProvider');
+      const emailService = getEmailService(logger);
+      await emailService.sendPaymentConfirmationEmail(emailData);
+
+      logger.logInfo('Email resent successfully', {
+        purchaseId: purchase.id,
+        buyerEmail: purchase.buyerEmail,
+        status: purchase.status,
+      });
+
+      return {
+        success: true,
+        message: 'Payment confirmation email resent successfully',
+      };
+    } catch (error) {
+      logger.logError('Error resending email for purchase', error);
       throw error;
     }
   }
