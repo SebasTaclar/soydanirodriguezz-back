@@ -90,6 +90,55 @@ Content-Type: application/json
   "purchaseId": "2"
 }
 
+### 14. Actualizar email de compra
+PUT http://localhost:7071/api/v1/purchase/1/update
+Content-Type: application/json
+
+{
+  "buyerEmail": "nuevo-email@ejemplo.com"
+}
+
+### 15. Actualizar email y nombre de compra
+PATCH http://localhost:7071/api/v1/purchase/1/update
+Content-Type: application/json
+
+{
+  "buyerEmail": "email-corregido@ejemplo.com",
+  "buyerName": "Nombre Corregido"
+}
+
+### 16. Actualizar todos los campos de compra
+PUT http://localhost:7071/api/v1/purchase/1/update
+Content-Type: application/json
+
+{
+  "buyerEmail": "completo@ejemplo.com",
+  "buyerName": "Nombre Completo",
+  "buyerContactNumber": "+57 300 123 4567"
+}
+
+### 17. Actualizar compra con ID inválido (debe fallar con 404)
+PUT http://localhost:7071/api/v1/purchase/999999/update
+Content-Type: application/json
+
+{
+  "buyerEmail": "test@ejemplo.com"
+}
+
+### 18. Actualizar compra con email inválido (debe fallar con 400)
+PUT http://localhost:7071/api/v1/purchase/1/update
+Content-Type: application/json
+
+{
+  "buyerEmail": "email-invalido"
+}
+
+### 19. Actualizar compra sin datos (debe fallar con 400)
+PUT http://localhost:7071/api/v1/purchase/1/update
+Content-Type: application/json
+
+{}
+
 ###
 # PROTECTED ENDPOINTS (Require JWT Authentication)
 # Use api-tests-with-auth.http for authenticated requests

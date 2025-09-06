@@ -377,4 +377,93 @@ export class PurchaseService {
       throw error;
     }
   }
+
+  async updatePurchase(
+    purchaseId: string,
+    updateData: { buyerEmail?: string; buyerName?: string; buyerContactNumber?: string },
+    logger: any
+  ): Promise<{ success: boolean; message: string; updatedPurchase: any }> {
+    try {
+      logger.logInfo('Updating purchase', { purchaseId, updateData });
+
+      // Buscar la compra por ID
+      const purchase = await this.prisma.purchase.findUnique({
+        where: {
+          id: parseInt(purchaseId),
+        },
+      });
+
+      if (!purchase) {
+        throw new Error('Purchase not found');
+      }
+
+      // Validar email si se proporciona
+      if (updateData.buyerEmail) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(updateData.buyerEmail)) {
+          throw new Error('Invalid email format');
+        }
+      }
+
+      // Validar nombre si se proporciona
+      if (updateData.buyerName && updateData.buyerName.trim().length < 2) {
+        throw new Error('Buyer name must be at least 2 characters long');
+      }
+
+      // Preparar datos para actualización (solo campos que se proporcionaron)
+      const dataToUpdate: any = {
+        updatedAt: new Date(),
+      };
+
+      if (updateData.buyerEmail) {
+        dataToUpdate.buyerEmail = updateData.buyerEmail;
+      }
+
+      if (updateData.buyerName) {
+        dataToUpdate.buyerName = updateData.buyerName.trim();
+      }
+
+      if (updateData.buyerContactNumber) {
+        dataToUpdate.buyerContactNumber = updateData.buyerContactNumber;
+      }
+
+      // Actualizar la compra
+      const updatedPurchase = await this.prisma.purchase.update({
+        where: {
+          id: purchase.id,
+        },
+        data: dataToUpdate,
+      });
+
+      logger.logInfo('Purchase updated successfully', {
+        purchaseId: updatedPurchase.id,
+        updatedFields: Object.keys(updateData),
+        oldEmail: purchase.buyerEmail,
+        newEmail: updatedPurchase.buyerEmail,
+      });
+
+      // Formatear la respuesta
+      const formattedPurchase = {
+        id: updatedPurchase.id,
+        wallpaperNumbers: JSON.parse(updatedPurchase.wallpaperNumbers),
+        buyerEmail: updatedPurchase.buyerEmail,
+        buyerName: updatedPurchase.buyerName,
+        buyerContactNumber: updatedPurchase.buyerContactNumber,
+        status: updatedPurchase.status,
+        amount: updatedPurchase.amount,
+        currency: updatedPurchase.currency,
+        createdAt: updatedPurchase.createdAt,
+        updatedAt: updatedPurchase.updatedAt,
+      };
+
+      return {
+        success: true,
+        message: 'Purchase updated successfully',
+        updatedPurchase: formattedPurchase,
+      };
+    } catch (error) {
+      logger.logError('Error updating purchase', error);
+      throw error;
+    }
+  }
 }
