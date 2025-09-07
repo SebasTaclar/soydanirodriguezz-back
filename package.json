@@ -30,7 +30,8 @@
     "jsonwebtoken": "^9.0.2",
     "mercadopago": "^2.8.0",
     "mongodb": "^6.15.0",
-    "prisma": "^5.20.0"
+    "prisma": "^5.20.0",
+    "sharp": "^0.34.3"
   },
   "devDependencies": {
     "@azure/functions": "^3.0.0",
@@ -38,6 +39,7 @@
     "@types/busboy": "^1.5.4",
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^20.19.9",
+    "@types/sharp": "^0.31.1",
     "@typescript-eslint/eslint-plugin": "^8.29.0",
     "@typescript-eslint/parser": "^8.29.0",
     "eslint": "^9.24.0",
